@@ -25,7 +25,7 @@ c      write (*,*) 'N=', n
       end
 
 c ----------------------------
-      subroutine GetRandom1 ( iseed, n, wt, i1, iSave, n1 )
+      subroutine GetRandom1 ( iseed, n, wt, i1, iSave, n1, iflag )
 
       integer iseed,i1,isave,n1,n
       real wt(n1, n1)
@@ -49,6 +49,7 @@ c     Get random number
       do i=1,n
          write (*,*) wt(i1,i)
       enddo
+      write (*,'( 2x,''iflag ='',i5)') iflag
       stop 99
       end
       

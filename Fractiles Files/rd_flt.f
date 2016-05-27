@@ -1,5 +1,6 @@
+       
       subroutine Rd_Fault_Data (nFltTotal,nFlt0,
-     1     cumWt_flt1, cumWt_param, cumWt_width, probAct,
+     1     cumWt_segModel, cumWt_param, cumWt_width, probAct,
      2     nParamVar, AttenType, cumwt_Ftype, 
      3     nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_Segwt )
 
@@ -14,11 +15,12 @@
      2     maxMagWt(MAXPARAM,MAXPARAM), rt_wt(10,10),
      3     dipWt(MAXPARAM)
       integer nFlt, nFlt0, nFlt1(1), nFlt2
-      real cumWt_flt1(MAX_FLT,MAX_FLT),cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM),
-     1     cumWt_width(MAX_FLT,1),cumwt_Ftype(MAX_FLT,MAX_FTYPE)
+      real cumWt_segModel(MAX_FLT,MAX_SEG),cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM),
+     1     cumWt_width(MAX_FLT,MAX_WIDTH)
+      real cumwt_Ftype(MAX_FLT,MAX_FTYPE)
       real magRecur1(MAXPARAM)
       real x(MAXPARAM), x2(MAXPARAM,MAXPARAM)
-      real ProbAct(1), topdepth
+      real ProbAct(MAX_FLT), topdepth
       character*80 fName1, fName
       character*1 tempname
       integer nFm, nFtypeModels(MAX_FLT), nFtype1(MAX_FLT)
@@ -65,9 +67,9 @@ c       Read number of segmentation models for this fault system
 C       Set up cum wt for segment models for this fault system
         do k=1,nSegModel(iFlt0)
           if ( k .eq. 1) then
-            cumWt_flt1(iFlt0,1) = segWt(iFlt0,1)
+            cumWt_segModel(iFlt0,1) = segWt(iFlt0,1)
           else
-            cumWt_flt1(iFlt0,k) = segWt(iFlt0,k) + cumWt_flt1(iFlt0,k-1)
+            cumWt_segModel(iFlt0,k) = segWt(iFlt0,k) + cumWt_segModel(iFlt0,k-1)
           endif
         enddo
 
@@ -247,6 +249,7 @@ c         Read reference mags for each fault thickness
             read (10,*) nRefMag(iThick)
             read (10,*) (x2(iThick,i),i=1,nRefMag(iThick))
             read (10,*) (refMagWt(iThick,i),i=1,nRefMag(iThick))
+            write (*,' ( 2x,i5,10f10.4)') iflt, (refMagWt(iThick,i),i=1,nRefMag(iThick))
             if ( nRefMag(iThick) .ne. 0 ) then
             endif
             iThick = iThick + 1
@@ -290,22 +293,22 @@ c        Load up Ftype Models and weights.
 
 c  **** this is not correct, it treats all as epistemic
 C        Set up Cum Wts for Ftype
-         do iFM=1,nFtypeModels(iFlt)
+c         do iFM=1,nFtypeModels(iFlt)
 c          write (*, '( i5,f10.4)') (iflt,  Ftype_Wt(iFlt,iFtype) )
 
-           if (iFtype .eq. 1) then
-             cumWt_Ftype(iFlt,iFtype) = Ftype_Wt(iFlt,iFtype)
-           else
-             cumWt_Ftype(iFlt,iFtype) = cumWt_Ftype(iFlt,iFtype-1) + Ftype_Wt(iFlt,iFtype)
-           endif
+c           if (iFtype .eq. 1) then
+c             cumWt_Ftype(iFlt,iFtype) = Ftype_Wt(iFlt,iFtype)
+c           else
+c             cumWt_Ftype(iFlt,iFtype) = cumWt_Ftype(iFlt,iFtype-1) + Ftype_Wt(iFlt,iFtype)
+c           endif
 
-         enddo
+c         enddo
 
 c     Load up parameter variations into large single dimension arrays        
          i1 = 0
 	 do iDip=1,n_Dip(iFlt)
            do iThick=1,nThick1(iFlt)
-             i1 = i1 + 1
+            i1 = i1 + 1
              width_wt(i1) = faultThickWt(iThick) * dipWt(iDip)
 
              i = 0
@@ -345,13 +348,12 @@ c               End of Loop over iRate
 
 c             End of Loop over iRecur
 	    enddo
+	    
             nParamVar(iFlt,i1) = i
-c            write (*,'( 2x,''iflt, dip-thick, nparam var ='',3i5)') iFlt, i1,  nParamVar(iFLt,i1)
-c            write (*,'( 10f10.4)') cumwt_param(iFlt,i1,nParamVar(iFlt,i1))
             if ( cumwt_param(iFlt,i1,nParamVar(iFlt,i1)) .gt. 0.999 ) then
 	      cumwt_param(iFlt,i1,nParamVar(iFlt,i1)) = 1.0
             endif
-
+            
 c         End of Loop over iThick1
           enddo
 
@@ -368,7 +370,6 @@ c         End of Loop over iDip
               cumWt_Width(iFlt,iWidth) = cumWt_Width(iFlt,iWidth-1) + faultThickWt(iWidth)
             endif
           enddo
-
 
 c       End of Loop over iFlt2 - number of segments    
         enddo
