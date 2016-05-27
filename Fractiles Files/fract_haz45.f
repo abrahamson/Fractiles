@@ -6,7 +6,7 @@ c     code version 43 or later. The fractiles are computed based on
 c     a Monte Carlo simulation. This version will be able to read fault
 c     files in which synchronous rupture is modeled. 
  
-c     compatible with Haz43
+c     compatible with Haz45
 c     Last modified: 2/11
 c      implicit none
 
@@ -289,7 +289,7 @@ c       INterp goes here
  1000 continue
 
       write (*,*) 
-      write (*,*) '*** Fractile Code (42) Completed with Normal Termination ***'
+      write (*,*) '*** Fractile Code (45) Completed with Normal Termination ***'
 
       stop
       end
