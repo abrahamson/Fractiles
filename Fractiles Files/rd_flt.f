@@ -1,51 +1,37 @@
        
-      subroutine Rd_Fault_Data (nFltTotal,nFlt0,
-     1     cumWt_segModel, cumWt_param, cumWt_width, probAct,
-     2     nParamVar, AttenType, cumwt_Ftype, 
-     3     nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_Segwt )
+      subroutine Rd_Fault_Data ( nFltTotal, nFlt0, cumWt_segModel, cumWt_param, 
+     1           cumWt_width, probAct, nParamVar, AttenType, cumwt_Ftype, 
+     2           nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_Segwt )
 
+      implicit none  
       include 'fract.h'
-      integer ndip(MAX_FLT), nWidth(MAX_FLT)
-      integer  nParamVar(MAX_FLT,MAX_WIDTH), nRT(MAXPARAM)
-      integer nMaxMag(MAX_FLT,MAXPARAM), nSlipRate(MAXPARAM), Attentype(MAX_FLT)
-      real segwt(MAX_FLT,MAX_FLT), wt, al_segWt(MAX_FLT)
-      real minmag, magstep, minDepth, coef_area(2), coef_width(2)
-      real sliprateWt(MAXPARAM,MAXPARAM),  bValueWt(MAXPARAM),
-     1     magRecurWt(MAXPARAM), faultWidthWt(MAXPARAM),
-     2     maxMagWt(MAXPARAM,MAXPARAM), rt_wt(10,10),
-     3     dipWt(MAXPARAM)
-      integer nFlt, nFlt0, nFlt1(1), nFlt2
-      real cumWt_segModel(MAX_FLT,MAX_SEG),cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM),
-     1     cumWt_width(MAX_FLT,MAX_WIDTH)
-      real cumwt_Ftype(MAX_FLT,MAX_FTYPE)
-      real magRecur1(MAXPARAM)
-      real x(MAXPARAM), x2(MAXPARAM,MAXPARAM)
-      real ProbAct(MAX_FLT), topdepth
+      
+      integer nWidth(MAX_FLT), nParamVar(MAX_FLT,MAX_WIDTH), Attentype(MAX_FLT),
+     1        nFlt0, nFlt2, nFm, nFtypeModels(MAX_FLT), nFtype1(MAX_FLT),
+     2        nThick1(MAX_FLT), iOverRideMag, directflag, synflag,
+     3        nSR, nActRAte, nRecInt, n_Dip(MAX_FLT), nRefMag(MAX_WIDTH),
+     4        nFtype(MAX_FLT), faultflag(MAX_FLT,MAX_SEG,MAX_FLT)
+      integer f_start(1), f_num(1), nSegModel(1), iWidth, iDip, iRefMag,
+     1        iflt, iflt0, iflt2, k, i, iCoor, isourceType, i_bValue, nb1,
+     2        iRate, i1, iFM, nRupArea, nRupWidth, iThick, iThick1, nMoRate,
+     3        nRate, nMagRecur, n_bValue, ii, ipt, nDownDip, insyn, iRecur,
+     4        iDepthModel, nfp, nsyn, nFltTotal
+      real segwt(MAX_FLT,MAX_FLT), wt, al_segWt(MAX_FLT), minmag, magstep, 
+     1     magRecurWt(MAXPARAM), dipWt(MAXPARAM), bValueWt(MAXPARAM), minDepth,
+     2     cumWt_segModel(MAX_FLT,MAX_SEG), cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM),
+     3     cumWt_width(MAX_FLT,MAX_WIDTH), cumwt_Ftype(MAX_FLT,MAX_FTYPE),
+     4     x(MAXPARAM), x2(MAXPARAM,MAXPARAM), ProbAct(MAX_FLT)
+      real ftmodelwt(MAX_FLT), ftype1(MAX_FLT,MAX_FLT), Ftype_wt1(MAX_FLT,MAX_FLT),
+     1     rateType1(MAXPARAM), width_wt(MAX_FLT), magsyn, rupsyn, jbsyn, 
+     2     seismosyn, hyposyn, wtsyn, wt_srBranch, wt_recIntBranch, wt_SR(MAXPARAM),
+     3     wt_RecInt(MAXPARAM), bValue2(MAXPARAM), actRate(MAXPARAM),
+     4     actRateWt(MAXPARAM), wt_MoRate(MAXPARAM), RateWt1(MAXPARAM)
+      real faultThickWt(MAX_WIDTH), refMagWt(MAX_Width,MAX_Width), fZ,
+     1     ftype(MAX_FLT,MAX_FLT), ftype_wt(MAX_FLT,MAX_FLT), hxStep, hyStep,
+     2     probAct0, sampleStep, dip1, top, fLong, fLat, wt_ActRateBranch, 
+     3     wt_MoRateBranch, sigArea, sigWidth, sum, attensyn, hwsyn, ftypesyn
       character*80 fName1, fName
-      character*1 tempname
-      integer nFm, nFtypeModels(MAX_FLT), nFtype1(MAX_FLT)
-      real ftmodelwt(MAX_FLT), ftype1(MAX_FLT,MAX_FLT), Ftype_wt1(MAX_FLT,MAX_FLT)
-      real rateType1(MAXPARAM), width_wt(MAX_FLT)
 
-      real rupLength_wt(MAX_N1), magApproach_wt(MAX_FLT)
-      real magLength_wt(MAX_N1), magArea_wt(MAX_N1)
-      integer iOverRide, nbvalue(MAX_FLT), nRecur(MAX_FLT), nThick1(MAX_FLT)
-      integer nMagLength, nMagArea
-      integer iOverRideMag, nruplength
-
-      real magsyn, rupsyn, jbsyn, seismosyn, hyposyn, wtsyn
-      integer directflag, synflag
-
-      integer nSR, nActRAte, nRecInt, n_Dip(MAX_FLT)
-      real wt_srBranch, wt_ActBranch, wt_recIntBranch
-      real wt_SR(MAXPARAM), wt_ActRate(MAXPARAM), wt_RecInt(MAXPARAM)
-      real bValue2(MAXPARAM), actRate(MAXPARAM), actRateWt(MAXPARAM)
-      real wt_MoRate(MAXPARAM), RateWt1(MAXPARAM), faultThickWt(MAX_WIDTH)
-      real refMagWt(MAX_Width,MAX_Width), MagDisp_Wt(MAX_FLT), Disp_Wt(MAX_FLT)
-      integer nRefMag(MAX_WIDTH), nFtype(MAX_FLT)
-      real ftype(MAX_FLT,MAX_FLT), ftype_wt(MAX_FLT,MAX_FLT), SegWt1(MAX_FLT)
-      integer faultflag(MAX_FLT,MAX_SEG,MAX_FLT)
-      integer f_start(1), f_num(1) , nSegModel(1)
 
 C     Input Fault Parameters
       read (10,*) iCoor
@@ -98,7 +84,7 @@ c         Read past the synchronous Rupture parameters
           if (synflag .gt. 0) then
             read (10,*) nsyn, attensyn
             do insyn=1,nsyn
-              read (10,*) magsyn, rupsyn, jbsyn, seismosyn, hwsyn,ftypesyn, hyposyn, wtsyn
+              read (10,*) magsyn, rupsyn, jbsyn, seismosyn, hwsyn, ftypesyn, hyposyn, wtsyn
             enddo
           endif
 
@@ -113,7 +99,6 @@ c         Check for standard fault source or areal source
               read (10,*) fLong, fLat
             enddo
           endif
-
 
 c         Check for grid source (w/o depth)
           if ( isourceType .eq. 3 .or. isourceType .eq. 7 ) then
@@ -253,16 +238,6 @@ c         Read reference mags for each fault thickness
             if ( nRefMag(iThick) .ne. 0 ) then
             endif
             iThick = iThick + 1
-              
-c           Copy these ref magnitudes for each addtional dip (no correlation allowed)
-c  ** not needed, we just use the iThick index for this weight
-c            do iDip=2,n_Dip(iflt)
-c              nRefMag(iThick) = nRefMag(iThick-1)
-c              do i=1,nRefMag(iThick)
-c                refMagWt(iThick,i) = refMagWt(iThick-1,i)
-c              enddo
-c              iThick = iThick + 1
-c            enddo
           enddo
 
 c         Read Past remaining input for this fault
@@ -290,19 +265,6 @@ c        Load up Ftype Models and weights.
          enddo
          nFm = nFm - 1
          nFtype(iFlt) = nFm
-
-c  **** this is not correct, it treats all as epistemic
-C        Set up Cum Wts for Ftype
-c         do iFM=1,nFtypeModels(iFlt)
-c          write (*, '( i5,f10.4)') (iflt,  Ftype_Wt(iFlt,iFtype) )
-
-c           if (iFtype .eq. 1) then
-c             cumWt_Ftype(iFlt,iFtype) = Ftype_Wt(iFlt,iFtype)
-c           else
-c             cumWt_Ftype(iFlt,iFtype) = cumWt_Ftype(iFlt,iFtype-1) + Ftype_Wt(iFlt,iFtype)
-c           endif
-
-c         enddo
 
 c     Load up parameter variations into large single dimension arrays        
          i1 = 0
