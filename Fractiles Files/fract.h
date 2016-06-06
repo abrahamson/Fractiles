@@ -14,7 +14,7 @@ c     Set array dimensions
      1            MAX_INTEN = 18, MAX_PROB = 3, MAX_DIP=5,  
      2            MAXPARAM = 40, MAX_MAG=3, MAX_DIST=15, 
      3            MAX_EPS=15, MAX_N1=150, MAX_Files=3, MAX_N2=6,MAX_Xcost=10,
-     4            MAX_WIDTH=9, MAX_SAMPLE=10000, MAX_RISK=4000)
+     4            MAX_WIDTH=9, MAX_SAMPLE=50000, MAX_RISK=4000)
       PARAMETER (MAXRUP=4, MAX_FIXED_MAG=3, MAX_MAGDIM=3, MAX_FTYPE=2, MAX_ATTEN=27, 
      1            MAX_ATTENTYPE=2)
 
