@@ -19,14 +19,14 @@ c     Last modified: 2/11
      4        iX(MAX_FILES), attentype(MAX_FLT), nGM_model(MAX_ATTENTYPE)
       integer iperc, nfiles, iseed, nSample, nFtype(MAX_FLT), mcatten(MAX_SAMPLE),
      1        f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT), iAmp,
-     2        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), iWidth, iFract
+     2        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), iWidth, iFract, nPer, jPer
       real tempx, step, risk(MAX_INTEN,MAX_ATTEN,MAX_FLT,MAX_WIDTH,MAXPARAM,MAX_FTYPE), 
      1     testInten(MAX_INTEN), al_segwt(MAX_FLT), probAct(MAX_FLT), 
      2     cumWt_segModel(MAX_FLT,MAX_SEG), cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM),
      3     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_Ftype(MAX_FLT,MAX_FTYPE),
      4     ran1, risk1(MAX_SAMPLE,MAX_INTEN), sortarray(MAX_SAMPLE)
       real cumWt_GM(MAX_ATTEN,MAX_ATTEN), perc(100,MAX_INTEN),mean(MAX_INTEN),
-     1     hazTotal(100), UHS(3), specT1, specT, hazLevel, x, testHaz 
+     1     hazTotal(MAX_INTEN), UHS(3,100), specT1(100), hazLevel, x, testHaz 
       character*80 filein, file1    
 
 *** need to fix: treating all ftype as epistemic
@@ -44,16 +44,22 @@ c     Last modified: 2/11
 
       read (31,*) iseed
       read (31,*) nSample
-      read (31,*) iPer
+      read (31,*) nPer
+      read (31,*) HazLevel
+      read (31,'( a80)') file1
+      open (30,file=file1,status='new')
 
       call CheckDim ( nSample, MAX_SAMPLE, 'MAX_SAMPLE ' )
+
+      do 1100 jPer=1,nPer
+      read (31,*) iPer
 
 c     Read Input File
       call RdInput ( nFlt, nFlt0, f_start, f_num, faultFlag, nInten, 
      1     testInten, probAct, al_segWt, cumWt_SegModel, cumWt_Width, 
      2     cumWt_param, cumWt_ftype, cumWt_GM, nSegModel, nWidth, 
      3     nParamVar, nFtype, nGM_model, nattentype, attenType, 
-     4     nProb, iPer, specT1)
+     4     nProb, iPer, specT1(jPer))
      
 c     Write out weights as a check
       do iFlt=1,nFlt
@@ -77,8 +83,7 @@ c     Write out weights as a check
           write (*,'( 2x,''iWidth:'',i5)') iWidth
           write (*,'( 10f10.3)') (cumWt_param(iFlt,iWidth,k),k=1,nParamVar(iflt,iWidth))
         enddo      
-      enddo
-      pause 'end of test wts'     
+      enddo    
         
 c     Loop Over Number of Sites
       nsite = 1
@@ -139,7 +144,7 @@ c             Reset the index to the faults in segment
               jFlt = iFlt1-i1+1
 
 c             Skip this fault if not included in this seg model
-              if (faultflag(iFlt0,mcSegModel,jFlt) .eq. 0. ) goto 50
+c              if (faultflag(iFlt0,mcSegModel,jFlt) .eq. 0. ) goto 50
 
 c *** fix this ***
 c              write (*,'( i5)') nFtype(iFlt1)
@@ -175,6 +180,7 @@ c         end loop over flt systems
 
 c       end loop over number of monte carlo samples
         enddo
+        write (*,'( 10e12.4)') (risk1(iSample,6),iSample=1,100)
 
 c       Compute mean hazard as check between fractile and haz code
          do iInten = 1,nInten
@@ -199,10 +205,6 @@ c       Compute fractile values
 	enddo
 
 c       Write output
-        read (31,'( a80)') file1
-        write(*,'( a32,a80)') 'Writing results to output file: ',file1
-
-        open (30,file=file1,status='new')
         write(30,'(3x,25f12.4)') (testInten(J2),J2=1,nInten)
 
         do i=1,nPerc
@@ -212,7 +214,6 @@ c       Write output
         write(30,'(/,2x,a4,30e12.4)') 'mean', (mean(j),j=1,nInten) 
  
 c       Compute the UHS value for this period for the 5th, 50th, 95th
-        hazLevel = 1.E-4
         do iFract=1,3
           if ( iFract .eq. 1 ) i1 = 5
           if ( iFract .eq. 2 ) i1 = 50          
@@ -229,7 +230,7 @@ c          Check for zero values in hazard curve.
            if (hazTotal(iAmp) .eq. 0. ) then
             write (*,*) 'warning: Zero Values for hazard curve at desired haz level.'
             write (*,*) 'Setting UHS to last nonzero value'
-            UHS(iFract) = exp(x)
+            UHS(jPer,iFract) = exp(x)
            endif
           
 c          Interpolate the hazard curve.
@@ -238,19 +239,24 @@ c          Interpolate the hazard curve.
      1            ( alog(hazTotal(iAmp))-alog(hazTotal(iAmp-1))) 
      2          * (alog(testInten(iAmp))-alog(testInten(iAmp-1))) 
      3          + alog(testInten(iAmp-1))
-            UHS(iFract) = exp(x)
+            UHS(jPer,iFract) = exp(x)
             goto 65
            endif
          enddo
  65     continue
       enddo
-      write (30,'( f10.3,3e15.4)') specT, (UHS(k),k=1,3)
 
 c       INterp goes here     
-     
-        close (30)
 
  1000 continue
+ 1100 continue
+
+c     Write UHS
+      do jPer=1,nPer
+        write (30,'( f10.3,3e12.4)') specT1(jPer), (UHS(jPer,k),k=1,3)
+      enddo
+
+      close (30)
 
       write (*,*) 
       write (*,*) '*** Fractile Code (45) Completed with Normal Termination ***'
