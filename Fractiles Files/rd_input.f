@@ -98,5 +98,7 @@ c     Read Fault Data
      1          cumWt_width, probAct, nParamVar, attentype, cumwt_ftype, 
      2          nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_segwt)
 
+      close (10)
+
        return
        end
