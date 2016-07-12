@@ -8,9 +8,9 @@
       
       integer nWidth(MAX_FLT), nParamVar(MAX_FLT,MAX_WIDTH), Attentype(MAX_FLT),
      1        nFlt0, nFlt2, nFm, nFtypeModels(MAX_FLT), nFtype1(MAX_FLT),
-     2        nThick1(MAX_FLT), iOverRideMag, directflag, synflag,
-     3        nSR, nActRAte, nRecInt, n_Dip(MAX_FLT), nRefMag(MAX_WIDTH),
-     4        nFtype(MAX_FLT), faultflag(MAX_FLT,MAX_SEG,MAX_FLT)
+     2        nThick1(MAX_FLT), directflag, synflag, nSR, nActRAte, nRecInt, 
+     3        n_Dip(MAX_FLT), nRefMag(MAX_WIDTH), nFtype(MAX_FLT), 
+     4        faultflag(MAX_FLT,MAX_SEG,MAX_FLT)
       integer f_start(1), f_num(1), nSegModel(1), iWidth, iDip, iRefMag,
      1        iflt, iflt0, iflt2, k, i, iCoor, isourceType, i_bValue, nb1,
      2        iRate, i1, iFM, nRupArea, nRupWidth, iThick, iThick1, nMoRate,
@@ -224,9 +224,6 @@ c         Read seismogenic thickness
          
 c         Read depth pdf
           read (10,*) iDepthModel       
-
-c         Read Mag method (scaling relations or set values)
-          read (10,*) iOverRideMag
 
 c         Read reference mags for each fault thickness
           iThick = 1

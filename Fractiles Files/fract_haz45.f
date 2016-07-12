@@ -33,8 +33,8 @@ c     Last modified: 2/11
         
       write (*,*) '*************************'
       write (*,*) '*   Fractile Code for   *'
-      write (*,*) '*       HAZ45-v1        *'
-      write (*,*) '*    June 2016, NAA     *'
+      write (*,*) '*       HAZ45-v2        *'
+      write (*,*) '*    July 2016, NAA     *'
       write (*,*) '*************************'
 
       write (*,*) 'Enter the input filename.'
