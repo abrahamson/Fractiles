@@ -2,54 +2,31 @@
 
 c     This  program will compute the fractiles from a seismic hazard
 c     run. This version of the program works with the seismic hazard
-c     code version 45.2
-c     The fractiles are computed based on 
+c     code version 45.2. The fractiles are computed based on 
 c     a Monte Carlo simulation.  
  
 c     compatible with Haz45.2
-c      implicit none
 
+      implicit none
       include 'fract.h'
-      integer iPer, nFlt0, nattentype, nProb, iFlt0, iFlt1
-      integer jAttenType, jFlt
-      integer i, j, k, jj, i1, i2, n2, j2, nn100, iSample
-      integer mcSegModel, mcFType, mcWidth, mcParam
-      integer nperc
-      real tempx, step, sum, sum0, slope, x1
       
-      real Haz(MAX_ATTEN, MAX_FLT, MAX_WIDTH, MAXPARAM, MAX_FTYPE), 
-     1     testInten(MAX_INTEN)
-      real al_segwt(MAX_FLT), cumwt_probact(2)
-       real probAct(MAX_FLT)
-c      real cum_wt(5)
-      integer nInten, jcalc(MAX_ATTENTYPE,MAX_ATTEN), nAtten(MAX_FLT), nsite, nFlt,
-     1        isite, iflt, 
-     1        iAtten, iInten, nWidth(MAX_FLT)
-      integer iParam, nParamVar(MAX_FLT,MAX_WIDTH)
-      integer  iFltWidth, iX(MAX_FILES)
-      character*80 filein, file1, fileinPSHA
-      integer nFlt1(MAX_FLT), nFlt2, attentype(MAX_FLT), nGM_model(MAX_ATTENTYPE)
-      real cumWt_segModel(MAX_FLT,MAX_SEG),
-     1     cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM),
-     1     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_Ftype(MAX_FLT,MAX_FTYPE)
-      real ran1, Haz1(MAX_SAMPLE,MAX_INTEN)
-      real sortarray(MAX_SAMPLE), attenWt(MAX_PROB)
-      real cumWt_GM(MAX_ATTEN,MAX_ATTEN)
-      integer Fflag 
-      integer iperc, nfiles, n_Dip(MAX_FLT)
-      real perc(100,MAX_INTEN),mean(MAX_INTEN) 
-      integer nProb1(MAX_ATTENTYPE), jProb(MAX_PROB), kProb, nDip(MAX_FLT)
-      integer iseed, nSample, nFtype(MAX_FLT)
-      real timeDepfactor(10), timeDepwt(10), cumwt_TDF(10), cumwt_mix(2)
-      integer mcatten(MAX_SAMPLE), iMix(MAX_SAMPLE), c
-      integer f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT)
-      integer faultflag(MAX_FLT,MAX_SEG,MAX_FLT)
-      real f2(MAX_SAMPLE), hazXX(3,200,MAX_INTEN), 
-     1     fract(200)
-      real wt0(MAX_SAMPLE), wt1(MAX_SAMPLE), wt2(MAX_SAMPLE), wt3(MAX_SAMPLE)
-      integer n1, kk, nHazLevel
-      real hazTotal(100), UHS(MAX_PROB,5,10), specT1(MAX_PROB) ,hazLevel(10)
-      
+      integer iPer, nFlt0, nattentype, nProb, iFlt0, iFlt1, jAttenType, jFlt,
+     1        i, j, k, jj, i1, i2, j2, nn100, iSample, mcSegModel, mcFType, 
+     2        mcWidth, mcParam, nperc, nInten, nAtten(MAX_FLT), nsite, nFlt,
+     3        isite, iInten, nWidth(MAX_FLT), nParamVar(MAX_FLT,MAX_WIDTH),
+     4        attentype(MAX_FLT), nGM_model(MAX_ATTENTYPE), nHazLevel   
+      integer iseed, nSample, nFtype(MAX_FLT), mcatten(MAX_SAMPLE), iHazLevel,
+     1        f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT), iAmp,
+     2        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), iFract, nPer, jPer, iperc   
+      real tempx, step, testInten(MAX_INTEN), probAct(MAX_FLT),
+     1     Haz(MAX_ATTEN, MAX_FLT, MAX_WIDTH, MAXPARAM, MAX_FTYPE), 
+     2     al_segwt(MAX_FLT), cumWt_segModel(MAX_FLT,MAX_SEG), ran1,
+     3     cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM), x, perc(100,MAX_INTEN), 
+     4     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_Ftype(MAX_FLT,MAX_FTYPE)
+      real Haz1(MAX_SAMPLE,MAX_INTEN), sortarray(MAX_SAMPLE), mean(MAX_INTEN),
+     1     cumWt_GM(MAX_ATTEN,MAX_ATTEN), hazTotal(100), UHS(MAX_PROB,5,10), 
+     2     specT1(MAX_PROB), hazLevel(10), testHaz      
+      character*80 filein, file1
       
 *** need to fix: treating all ftype as epistemic
 
@@ -61,8 +38,8 @@ c      open (33,file='debug.out')
         
       write (*,*) '*************************'
       write (*,*) '*   Fractile Code for   *'
-      write (*,*) '*       HAZ45.2-v1      *'
-      write (*,*) '*    Jul 2016           *'
+      write (*,*) '*       HAZ 45.2        *'
+      write (*,*) '*       Jul 2016        *'
       write (*,*) '*************************'
 
 c     Open and read the run file
@@ -96,7 +73,7 @@ c     Read Fault Data (only the if this is the first period)
            call Rd_Fault_Data ( nFlt, nFlt0,
      7     cumWt_segModel, cumWt_param, cumWt_width, probAct,
      2     nParamVar, attentype, cumwt_ftype, 
-     3     nFtype, nWidth, nSegModel,  f_start, f_num, faultFlag, al_segwt)
+     3     nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_segwt)
       endif
              
 c     Loop Over Number of Sites
@@ -159,7 +136,6 @@ c             set the attenuation type for this fault
 
 c             Reset the index to the faults in segment
               jFlt = iFlt1-i1+1
-c              write (*,'( 2x''fltflag'', 10i5)') iFlt0, mcSegMOdel, jFlt, faultflag(iFlt0,mcSegModel,jFlt)
 
 c             Skip this fault if not included in this seg model
               if (faultflag(iFlt0,mcSegModel,jFlt) .eq. 0 ) goto 50
@@ -173,7 +149,6 @@ c             Select the fault width for this subsource
               call GetRandom1 ( iseed, nWidth(iFlt1), cumWt_width, iflt1, mcWidth, MAX_FLT, 3 )
 
 c             Select the parameter variation for this subsource and fault width
-c              write (*,'( i5)') nParamVar(iFlt1,mcWidth)
               call GetRandom2 (iseed, nParamVar(iFlt1,mcWidth), 
      1          cumWt_param, iFlt1, mcWidth, mcParam, MAX_FLT, MAX_WIDTH)
 
@@ -281,7 +256,7 @@ c     Write UHS
  
 
       write (*,*) 
-      write (*,*) '*** Fractile Code (42) Completed with Normal Termination ***'
+      write (*,*) '*** Fractile Code (45) Completed with Normal Termination ***'
 
       stop
       end
@@ -294,13 +269,12 @@ c -------------------------------------------------------------------
       implicit none
       include 'fract.h'
 
-      integer isite, nInten, nFlt,  nSite, nAtten(1),ix(MAX_FILES), iProb,
+      integer nInten, nFlt, nAtten(1), iProb, nAtten1, nWidth1, jFlt,
      1        nParamVar(MAX_FLT,MAX_WIDTH), nWidth(MAX_FLT), nfiles,
-     2        nFtype(MAX_FLT), iPer, nProb, nwr, i, j, iFlt, jProb, jFlt, 
-     3        i1, iAtten, iWidth, iFtype, jInten, jFltWidth
-      integer nAtten1, nWidth1, nFtype1,nParamVar1(100),nInten1
-      integer nGM_Model(MAX_ATTENTYPE), attenType(MAX_FLT)
-      integer ix1(6), jj
+     2        nFtype(MAX_FLT), iPer, nProb, nwr, i, j, iFlt, jProb,  
+     3        i1, iAtten, iWidth, iFtype, jInten, jFltWidth, nInten1,
+     4        nFtype1, nParamVar1(100), nGM_Model(MAX_ATTENTYPE)
+      integer attenType(MAX_FLT)
       real haz(MAX_ATTEN,MAX_FLT,MAX_WIDTH,MAXPARAM,MAX_FTYPE),
      1     temp(MAX_INTEN)
       character*80 file1, dummy
