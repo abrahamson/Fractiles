@@ -1,14 +1,13 @@
 c ----------------------------
       subroutine GetRandom0 ( iseed, n, wt, iSave )
 
-      integer iseed,isave,n
-      real wt(1)
-      real x
+      implicit none
+
+      integer iseed, isave, n, i
+      real ran1, wt(1), x
 
 c     Get random number
       x = ran1( iseed )
-
-c      write (*,*) 'N=', n
 
       do i=1,n
         if ( x .le. wt(i) ) then
@@ -27,9 +26,10 @@ c      write (*,*) 'N=', n
 c ----------------------------
       subroutine GetRandom1 ( iseed, n, wt, i1, iSave, n1, iflag )
 
-      integer iseed,i1,isave,n1,n
-      real wt(n1, n1)
-      real x
+      implicit none
+
+      integer iseed, i1, isave, n1, n, i, iflag
+      real ran1, wt(n1, n1), x
       
 c     Get random number
       x = ran1( iseed )
@@ -56,9 +56,10 @@ c     Get random number
 c ----------------------------
       subroutine GetRandom1b ( iseed, n, wt, i1, iSave, n1, n2 )
 
-      integer iseed,i1,isave,n1,n, n2
-      real wt(n2, n1)
-      real x
+      implicit none
+
+      integer iseed, i1, isave, n1, n, n2, i
+      real ran1, wt(n2, n1), x
 
 c     Get random number
       x = ran1( iseed )
@@ -80,10 +81,11 @@ c     Get random number
 c ----------------------------
       subroutine GetRandom2 ( iseed, n, wt, i1, i2, iSave, n1, n2 )
 
-      include 'FRACT.H'
+      implicit none
+      include 'fract.h'
 
-      real wt(n1, n2, MAXPARAM), x
-      integer n1, n2, n, iseed, i1, i2
+      integer n1, n2, n, iseed, i, i1, i2, iSave
+      real ran1, wt(n1, n2, MAXPARAM), x
 
 c     Get random number
       x = ran1( iseed )
@@ -107,10 +109,11 @@ c     Get random number
 c ----------------------------
       subroutine GetRandom3 ( iseed, n, wt, i1, i2, i3, iSave, n1, n2, n3 )
 
-      include 'FRACT.H'
+      implicit none
+      include 'fract.h'
 
-      real wt(n1, n2, n3, MAXPARAM), x
-      integer n1, n2, n3
+      integer iseed, n, n1, n2, n3, i, i1, i2, i3, iSave
+      real ran1, wt(n1, n2, n3, MAXPARAM), x
       
 c     Get random number
       x = ran1( iseed )
@@ -135,6 +138,8 @@ c     Get random number
 c ----------------------------
 
       function Ran1 ( idum )
+
+      implicit none
 
 c     Random number generator, From numerical recipes
       integer idum, ia, im, iq, ir, ntab, ndiv
@@ -165,12 +170,13 @@ c     Random number generator, From numerical recipes
       return
       end
 
-
 c ----------------------------------------------------------------------
 
-
-
       subroutine CheckDim ( n, nMax, name )
+      
+      implicit none
+     
+      integer n, nMax
       character*80 name
       
       if ( n .gt. nMax ) then
@@ -184,7 +190,11 @@ c ----------------------------------------------------------------------
 c --------------------------
 
       subroutine CheckWt ( x, n, fName, name )
-      real x(1)
+      
+      implicit none
+      
+      integer i, n
+      real x(1), sum
       character*80 name, fName
       
       sum = 0.
@@ -204,7 +214,11 @@ c --------------------------
 c --------------------------
 
       subroutine CheckWt1 ( x, n, j, n1, fName, name  )
-      real x(n1,1), delta
+      
+      implicit none
+      
+      integer i, n, n1, j, k
+      real x(n1,1), delta, sum
       character*80 fName, name
       
       sum = 0.
@@ -247,8 +261,12 @@ C     |         X     --SORTED ARRAY                           |
 C     |________________________________________________________|
 C
       SUBROUTINE SORT(X,Y,N)
+      
+      implicit none
+
+      INTEGER I,J,K,L,M,N      
       REAL X(1),Y(1),S,T
-      INTEGER I,J,K,L,M,N
+
       I = 1
 10    K = I
 20    J = I
