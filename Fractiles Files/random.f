@@ -1,27 +1,3 @@
-c ----------------------------
-      subroutine GetRandom0 ( iseed, n, wt, iSave )
-
-      implicit none
-
-      integer iseed, isave, n, i
-      real ran1, wt(1), x
-
-c     Get random number
-      x = ran1( iseed )
-
-      do i=1,n
-        if ( x .le. wt(i) ) then
-          iSave = i
-          return
-        endif
-      enddo
-      
-      write (*,*) ' Get Random Number 0'
-      write (*,*) 'Weights = ',wt
-      write (*,*) 'Random Number = ', x
-      write (*,'( 2x,''Error - bad ran number or weights'')')
-      stop 99
-      end
 
 c ----------------------------
       subroutine GetRandom1 ( iseed, n, wt, i1, iSave, n1, iflag )
@@ -107,35 +83,6 @@ c     Get random number
       end
 
 c ----------------------------
-      subroutine GetRandom3 ( iseed, n, wt, i1, i2, i3, iSave, n1, n2, n3 )
-
-      implicit none
-      include 'fract.h'
-
-      integer iseed, n, n1, n2, n3, i, i1, i2, i3, iSave
-      real ran1, wt(n1, n2, n3, MAXPARAM), x
-      
-c     Get random number
-      x = ran1( iseed )
-
-      do i=1,n
-        if ( x .le. wt(i1,i2,i3,i) ) then
-          iSave = i
-          return
-        endif
-      enddo
-      
-      write (*,*) ' Get Random Number 3'
-      write (*,'( 2x,''Error - bad ran number 3 or weights'')')
-
-      write (*,*) 'Random Number = ', x
-      write (*,'(2x,''wts:'',10f10.4)') (wt(i1,i2,i3,i),i=1,n)
-      write (*,'( 5i5)') n, i1, i2, i3
-
-      stop 99
-      end
-
-c ----------------------------
 
       function Ran1 ( idum )
 
@@ -212,37 +159,6 @@ c --------------------------
       end
 
 c --------------------------
-
-      subroutine CheckWt1 ( x, n, j, n1, fName, name  )
-      
-      implicit none
-      
-      integer i, n, n1, j, k
-      real x(n1,1), delta, sum
-      character*80 fName, name
-      
-      sum = 0.
-      do i=1,n
-        sum = sum + x(j,i)
-      enddo
-      delta = abs(sum - 1.0)
-      if ( delta .gt. 0.01 ) then
-        write (*,*) ' CheckWt1 Subroutine.'
-        write (*,'( 2x,''Error -- Weights do not sum to unity'')')
-        write (*,'( 2x,a80)') name
-        write (*,'( 2x,a80)') fName
-        write (*,*) ' Sum = ', sum
-        do k=1,n
-           write (*,*) k,x(j,k)
-        enddo
-        stop 99
-      endif
-      return
-      end
-      
-      
-c --------------------------
-C
 C      ________________________________________________________
 C     |                                                        |
 C     |            SORT AN ARRAY IN INCREASING ORDER           |
