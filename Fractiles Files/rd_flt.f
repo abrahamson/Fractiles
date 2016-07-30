@@ -282,9 +282,9 @@ c         do iFM=1,nFtypeModels(iFlt)
 
 c     Load up parameter variations into large single dimension arrays        
          i1 = 0
-	 do iDip=1,n_Dip(iFlt)
-           do iThick=1,nThick1(iFlt)
-            i1 = i1 + 1
+         do iThick=1,nThick1(iFlt)
+           do iDip=1,n_Dip(iFlt)
+             i1 = i1 + 1
              width_wt(i1) = faultThickWt(iThick) * dipWt(iDip)
 
              i = 0
@@ -330,20 +330,20 @@ c             End of Loop over iRecur
 	      cumwt_param(iFlt,i1,nParamVar(iFlt,i1)) = 1.0
             endif
             
-c         End of Loop over iThick1
+c         End of Loop over iDip
           enddo
 
           probAct(iFlt) = probAct0
 
-c         End of Loop over iDip
+c         End of Loop over iThick1
          enddo
          nWidth(iflt) = i1
 
          do iWidth=1,nWidth(iFlt)
             if ( iWidth .eq. 1) then
-              cumWt_Width(iFlt,iWidth) = faultThickWt(iWidth)
+              cumWt_Width(iFlt,iWidth) = width_wt(iWidth)
             else
-              cumWt_Width(iFlt,iWidth) = cumWt_Width(iFlt,iWidth-1) + faultThickWt(iWidth)
+              cumWt_Width(iFlt,iWidth) = cumWt_Width(iFlt,iWidth-1) + width_wt(iWidth)
             endif
           enddo
 
