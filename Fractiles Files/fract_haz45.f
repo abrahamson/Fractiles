@@ -25,7 +25,7 @@ c     compatible with Haz45.2
      4     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_Ftype(MAX_FLT,MAX_FTYPE)
       real Haz1(MAX_SAMPLE,MAX_INTEN), sortarray(MAX_SAMPLE), mean(MAX_INTEN),
      1     cumWt_GM(MAX_ATTEN,MAX_ATTEN), hazTotal(100), UHS(MAX_PROB,5,10), 
-     2     specT1(MAX_PROB), hazLevel(10), testHaz      
+     2     specT1(MAX_PROB), hazLevel(10), testHaz, version      
       character*80 filein, file1
       
 *** need to fix: treating all ftype as epistemic
@@ -66,11 +66,11 @@ c     Read Input File
      1     nInten,  testInten, probAct, al_segWt, 
      3     cumWt_SegModel, cumWt_Width, cumWt_param, cumWt_ftype, cumWt_GM, 
      4     nSegModel, nWidth, nParamVar, nFtype, nGM_model, 
-     5     nattentype, attenType, nProb, iPer, specT1(jPer))
+     5     nattentype, attenType, nProb, iPer, specT1(jPer), version)
      
 c     Read Fault Data (only the if this is the first period)
       if ( jPer .eq. 1 ) then
-           call Rd_Fault_Data ( nFlt, nFlt0,
+           call Rd_Fault_Data ( version, nFlt, nFlt0,
      7     cumWt_segModel, cumWt_param, cumWt_width, probAct,
      2     nParamVar, attentype, cumwt_ftype, 
      3     nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_segwt)
@@ -204,7 +204,7 @@ c       Write output
         write(30,'(/,2x,a4,30e12.4)') 'mean', (mean(j),j=1,nInten)
         write(30,'(/,''----------------------------------------------'',/)') 
  
-c       Compute the UHS value for this period for the 5th, 50th, 95th
+c       Compute the UHS value for this period for the 5th, 10th, 50th, 90th, 95th
         do iHazLevel=1,nHazLevel
          do iFract=1,5
           if ( iFract .eq. 1 ) i1 = 5

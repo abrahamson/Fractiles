@@ -4,7 +4,7 @@ c -------------------------------------------------------------------------
      1           testInten, probAct, al_segWt, cumWt_SegModel, cumWt_Width, 
      2           cumWt_param, cumWt_ftype, cumWt_GM, nSegModel, nWidth, 
      3           nParamVar, nFtype, nGM_model, nAttenType, attenType, 
-     4           nProb, iPer, SpecT1 )
+     4           nProb, iPer, SpecT1, version )
 
       implicit none
       include 'fract.h'
@@ -20,7 +20,7 @@ c -------------------------------------------------------------------------
      2     checkwt, c1, c2, wtgm(4,MAX_ATTEN), cumWt_SegModel(MAX_FLT,MAX_SEG),
      3     cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM), sigtrunc, Varadd,
      4     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_GM(MAX_ATTEN,MAX_ATTEN)
-      real cumwt_FTYPE(MAX_FLT,MAX_FTYPE), SpecT1
+      real cumwt_FTYPE(MAX_FLT,MAX_FTYPE), SpecT1, version
       character*80 filein, title      
 
 c     Set Data file units
@@ -39,6 +39,9 @@ c     Open PSHA Run Input File
 c     Open Input PSHA Source/Fault file
       read (20,'( a80)') filein
       open (10,file=filein,status='old')
+      
+c     Read version format
+      read (20,*) version
 
 c     Read in parameters for background grid.
       read (20,*) minlat,maxlat,minlong,maxlong
