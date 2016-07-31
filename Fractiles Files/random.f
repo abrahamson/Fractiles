@@ -117,13 +117,12 @@ c     Random number generator, From numerical recipes
       return
       end
 
-
 c ----------------------------------------------------------------------
 
       subroutine CheckDim ( n, nMax, name )
-
+      
       implicit none
-
+     
       integer n, nMax
       character*80 name
       
@@ -134,22 +133,56 @@ c ----------------------------------------------------------------------
       endif
       return
       end
- 
+
 c --------------------------
 
-      subroutine sort(X,Y,N)
-
-c     this subroutine sorts an array in increasing order
-c     inputs:  x - array of numbers
-c              y - working array (length at least n)
-c              n - number of array elements to sort
-c     outputs: x - sorted array
-
-      implicit none      
+      subroutine CheckWt ( x, n, fName, name )
       
+      implicit none
+      
+      integer i, n
+      real x(1), sum
+      character*80 name, fName
+      
+      sum = 0.
+      do i=1,n
+        sum = sum + x(i)
+      enddo
+      if ( sum .ne. 1. ) then
+        write (*,*) ' CheckWt Subroutine.'
+        write (*,'( 2x,''Error -- Weights do not sum to unity'')')
+        write (*,'( 2x,a80)') name
+        write (*,'( 2x,a80)') fName
+        stop 99
+      endif
+      return
+      end
+
+c --------------------------
+C      ________________________________________________________
+C     |                                                        |
+C     |            SORT AN ARRAY IN INCREASING ORDER           |
+C     |                                                        |
+C     |    INPUT:                                              |
+C     |                                                        |
+C     |         X     --ARRAY OF NUMBERS                       |
+C     |                                                        |
+C     |         Y     --WORKING ARRAY (LENGTH  AT LEAST N)     |
+C     |                                                        |
+C     |         N     --NUMBER OF ARRAY ELEMENTS TO SORT       |
+C     |                                                        |
+C     |    OUTPUT:                                             |
+C     |                                                        |
+C     |         X     --SORTED ARRAY                           |
+C     |________________________________________________________|
+C
+      SUBROUTINE SORT(X,Y,N)
+      
+      implicit none
+
       INTEGER I,J,K,L,M,N      
       REAL X(1),Y(1),S,T
-      
+
       I = 1
 10    K = I
 20    J = I
@@ -209,4 +242,8 @@ c     outputs: x - sorted array
       GOTO 40
       END
 
+
 c -------------
+
+ 
+

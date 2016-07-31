@@ -1,10 +1,10 @@
 c -------------------------------------------------------------------------
 
-      subroutine RdInput ( nFlt, nFlt0, f_start, f_num, faultFlag, nInten, 
+      subroutine RdInput ( nFlt, nFlt0, f_start, f_num, faultFlag, nInten,  
      1           testInten, probAct, al_segWt, cumWt_SegModel, cumWt_Width, 
      2           cumWt_param, cumWt_ftype, cumWt_GM, nSegModel, nWidth, 
      3           nParamVar, nFtype, nGM_model, nAttenType, attenType, 
-     4           nProb, iPer, SpecT1 )
+     4           nProb, iPer, SpecT1, version )
 
       implicit none
       include 'fract.h'
@@ -15,13 +15,13 @@ c -------------------------------------------------------------------------
      3        nFtype(MAX_FLT), faultflag(MAX_FLT,MAX_SEG,MAX_FLT), j,
      4        f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT), jj
       integer iprob, iPer, nFlt, nFlt0, nwr
-      real testInten(MAX_INTEN), probAct(MAX_FLT), minlat, maxlat, 
+      real testInten(MAX_INTEN), probAct(MAX_FLT), minlat, maxlat,
      1     minlong, maxlong, maxdist, specT, dirflag, al_segWt(MAX_FLT),
      2     checkwt, c1, c2, wtgm(4,MAX_ATTEN), cumWt_SegModel(MAX_FLT,MAX_SEG),
      3     cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM), sigtrunc, Varadd,
      4     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_GM(MAX_ATTEN,MAX_ATTEN)
-      real cumwt_FTYPE(MAX_FLT,MAX_FTYPE), SpecT1
-      character*80 filein, title
+      real cumwt_FTYPE(MAX_FLT,MAX_FTYPE), SpecT1, version
+      character*80 filein, title      
 
 c     Set Data file units
       nwr = 11
@@ -39,11 +39,13 @@ c     Open PSHA Run Input File
 c     Open Input PSHA Source/Fault file
       read (20,'( a80)') filein
       open (10,file=filein,status='old')
+      
+c     Read version format
+      read (20,*) version
 
 c     Read in parameters for background grid.
       read (20,*) minlat,maxlat,minlong,maxlong
 
-c     Added back in read of single maxdist
       read (20,*) maxdist
 
 c     Input Title (not used) 
@@ -93,10 +95,6 @@ C         Set up cum wts for attenuation models.
 
       ix(1) = 0
 
-c     Read Fault Data
-           call Rd_Fault_Data ( nFlt, nFlt0, cumWt_segModel, cumWt_param, 
-     1          cumWt_width, probAct, nParamVar, attentype, cumwt_ftype, 
-     2          nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_segwt)
 
        return
        end
