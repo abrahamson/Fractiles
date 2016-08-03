@@ -22,7 +22,7 @@
      1           cumWt_width, probAct, nParamVar, AttenType, cumwt_Ftype, 
      2           nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_Segwt )
         else
-          write (*,'(2x,''bad version'')')
+          write (*,*) 'Incompatible fault file, use Haz45.2 or Haz45.1'
           stop 99
         endif
         

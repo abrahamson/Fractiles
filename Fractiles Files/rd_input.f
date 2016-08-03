@@ -40,8 +40,12 @@ c     Open Input PSHA Source/Fault file
       read (20,'( a80)') filein
       open (10,file=filein,status='old')
       
-c     Read version format
-      read (20,*) version
+C     Check for version compatibility with hazard code
+        read (20,*) version
+         if (version .ne. 45.2) then
+         write (*,*) 'Incompatible version of Haz45, use Haz45.2'
+         stop 99
+        endif
 
 c     Read in parameters for background grid.
       read (20,*) minlat,maxlat,minlong,maxlong

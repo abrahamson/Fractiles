@@ -276,7 +276,7 @@ c -------------------------------------------------------------------
      4        nFtype1, nParamVar1(100), nGM_Model(MAX_ATTENTYPE)
       integer attenType(MAX_FLT)
       real haz(MAX_ATTEN,MAX_FLT,MAX_WIDTH,MAXPARAM,MAX_FTYPE),
-     1     temp(MAX_INTEN)
+     1     temp(MAX_INTEN), version
       character*80 file1, dummy
 
       nwr = 12
@@ -295,6 +295,13 @@ c     Open output file
         rewind (nwr)
       endif
 
+C     Check for version compatibility with hazard code
+        read (nwr,*) version
+         if (version .ne. 45.2) then
+         write (*,*) 'Incompatible version of Haz45, use Haz45.2'
+         stop 99
+        endif
+        
 c     Read out1 file            
       do iFlt=1,nFlt  
        do iWidth=1,nWidth(iFlt)
