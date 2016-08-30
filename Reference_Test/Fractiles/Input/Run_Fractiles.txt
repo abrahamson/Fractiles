@@ -1,0 +1,9 @@
+5431                	iseed
+55000        		nSample
+1         		nPer
+1  1.E-4		nHazLevel, HazLevel		    	 
+Fract_RefTest1.out
+1			Period
+Run_HazRefTest1.txt
+HazRefTest1_Site1.out1
+
