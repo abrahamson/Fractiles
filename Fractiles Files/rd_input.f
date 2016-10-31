@@ -42,8 +42,8 @@ c     Open Input PSHA Source/Fault file
       
 C     Check for version compatibility with hazard code
         read (20,*) version
-         if (version .ne. 45.2) then
-         write (*,*) 'Incompatible version of Haz45, use Haz45.2'
+         if (version .ne. 45.2 .and. version .ne. 45.1) then
+         write (*,*) 'Hazard faultfile format incompatible version of Haz45, use Haz45.2 or Haz45.1'
          stop 99
         endif
 
