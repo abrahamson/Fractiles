@@ -36,11 +36,11 @@ c      open (33,file='debug.out')
     
 *** need to fix: treating all ftype as epistemic
         
-      write (*,*) '*************************'
-      write (*,*) '*   Fractile Code for   *'
-      write (*,*) '*       HAZ 45.2        *'
-      write (*,*) '*       Jul 2016        *'
-      write (*,*) '*************************'
+      write (*,*) '********************************'
+      write (*,*) '*        Fractiles Code        *'
+      write (*,*) '*         Release 45.2         *'
+      write (*,*) '*      Tagged Jan 3, 2017      *'
+      write (*,*) '********************************'
 
 c     Open and read the run file
       write (*,*) 'Enter the input filename.'      
