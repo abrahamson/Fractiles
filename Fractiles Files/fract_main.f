@@ -28,6 +28,26 @@ c     compatible with Haz45.2
      2     specT1(MAX_PROB), hazLevel(10), testHaz, version      
       character*80 filein, file1
       
+      integer iCorrFlag, jFlt1, nCorr1,
+     1        corrNode(100), corrNFlt(100), corrFlt(100,MAX_FLT)
+
+      integer n_Dip(MAX_FLT),n_bvalue(MAX_FLT), nActRate(MAX_FLT), nSR(MAX_FLT), 
+     1        nRecInt(MAX_FLT), nMoRate(MAX_FLT),
+     1        nRefMag(MAX_FLT,MAX_WIDTH), nFtypeModels(MAX_FLT)
+      integer nFtype(MAX_FLT,MAXPARAM)
+      real ftype_al(MAX_FLt,MAXPARAM,5)
+      real t1, fact1
+
+      real segwt(MAX_FLT,MAX_SEG), dipWt(MAX_FLT,MAXPARAM), bValueWt(MAX_FLT,MAXPARAM), actRateWt(MAX_FLT,MAXPARAM), 
+     1     wt_SR(MAX_FLT,MAXPARAM), wt_RecInt(MAX_FLT,MAXPARAM), wt_MoRate(MAX_FLT,MAXPARAM), magRecurWt(MAX_FLT,MAXPARAM),    
+     1     faultThickWt(MAX_FLT,MAXPARAM), 
+     2     refMagWt(MAX_FLT,MAX_Width, MAXPARAM), ftmodelwt(MAX_FLT,MAXPARAM)
+      real wt_rateMethod(MAX_FLT,4)
+      integer iPer, nFlt0, f_start(MAX_FLT), f_num(MAX_FLT)
+      integer nBR_SSC(MAX_FLT,MAX_NODE), nRate(MAX_FLT), RateType(MAX_FLt,MAXPARAM)
+      integer nBR_SSC1(MAX_FLT,MAX_NODE)
+
+      
 *** need to fix: treating all ftype as epistemic
 
 c      integer TreeIndex(MAX_FLT,MAX_DIP,MAX_WIDTH,MAX_N2,MAX_N2,MAX_N2,MAX_N2)      
@@ -51,6 +71,15 @@ c     Open and read the run file
       read (31,*) nPer
       read (31,*) nHazLevel, (HazLevel(k),k=1,nHazLevel)
 
+c     Read correlation
+      read (31,*) nCorr1
+      if ( nCorr1 .ne. 0 ) then
+        do i=1,nCorr1
+          read (31,*) corrNode(i), corrNFlt(i)
+          read (31,*) (corrFlt(i,j),j=1,corrNFlt(i))
+        enddo
+      endif
+
       read (31,'( a80)') file1
       write (*,'( a80)') file1
       open (30,file=file1,status='new')
@@ -70,12 +99,21 @@ c     Read Input File
      
 c     Read Fault Data (only the if this is the first period)
       if ( jPer .eq. 1 ) then
-           call Rd_Fault_Data ( version, nFlt, nFlt0,
-     7     cumWt_segModel, cumWt_param, cumWt_width, probAct,
-     2     nParamVar, attentype, cumwt_ftype, 
-     3     nFtype, nWidth, nSegModel, f_start, f_num, faultFlag, al_segwt)
+c       Read fault file
+        call Rd_Fault_Data  (nFlt, nFlt0, f_start, f_num, AttenType, 
+     1           n_Dip, n_bValue, nActRate,  nSR,   nRecInt,   nMoRate,   nMagRecur,  nThick,
+     1           nRefMag,  nFtypeModels,
+     2           dipWt, bValueWt, actRateWt, wt_sr, wt_recInt, wt_MoRate, magRecurWt, 
+     3           faultThickWt, refMagWt, ftmodelwt,
+     3           nFtype, ftype_al, wt_rateMethod, al_Segwt,
+     3           nRate, rateType, nBR_SSC, nSegModel, segwt, segFlag, indexRate, fname )
       endif
-             
+
+c     SSC branches: 1 = Dip, 2=crustal thick, 3=ftype, 4=magpdf, 5=maxmag,
+c                   6=RateType, 7=SR, 8=a-value, 9=paleo, 
+c                   10=Moment, 11=b_value flt, 12=segModel
+      nNode_SSC = 12
+
 c     Loop Over Number of Sites
       nsite = 1
       do 1000 iSite = 1, nSite
@@ -117,10 +155,10 @@ c         Sample the attenuation relation (correlated for all sources)
           do jj=1,nAttenType
            call GetRandom1 ( iseed, nGM_model(jj), cumWt_GM, jj, mcAtten(jj), MAX_ATTEN, 1 ) 
           enddo
-
-              
+            
 c         Sample the hazard from each geometrically independent source region (or fault)
 c         (a source region may include multiple subsources) 
+          iFlt2 = 0
           do iFlt0 = 1, nFlt0
 
 c           Select the seg model for this source region
@@ -130,6 +168,7 @@ c           Select the seg model for this source region
             i2 = f_start(iFlt0) + f_num(iFLt0) - 1
 
             do iflt1=i1,i2
+              iFlt2 = iFlt2 + 1
 
 c             set the attenuation type for this fault
               jAttenType = attenType(iflt1)
@@ -145,12 +184,35 @@ c             Select the fault mechanism type
               call GetRandom1b ( iseed, nFtype(iFlt1), cumWt_Ftype, iflt1, 
      1            mcFTYPE, MAX_FTYPE, MAX_FLT )
 
-c             Select the fault width for this subsource 
-              call GetRandom1 ( iseed, nWidth(iFlt1), cumWt_width, iflt1, mcWidth, MAX_FLT, 3 )
+c             Sample each of the SSC nodes (skip seg model node)            
+              do iNode=1,nNode_SSC-1 
 
-c             Select the parameter variation for this subsource and fault width
-              call GetRandom2 (iseed, nParamVar(iFlt1,mcWidth), 
-     1          cumWt_param, iFlt1, mcWidth, mcParam, MAX_FLT, MAX_WIDTH)
+c              Check if this is a correlated node
+c              if so, pick the branchfor first flt in the list
+               iCorrFlag = 0
+               if ( nCorr1 .ne. 0 ) then
+                do i=1,nCorr1
+                 if ( iNode .eq. corrNode(i) .and. iFlt2 .eq. corrFlt(i,1)) then
+                   iCorrFlag = 1
+                   kFlt2 = corrFlt(i,1)
+                 endif
+                enddo
+               endif
+               if ( iCorrFlag .eq. 0 ) then
+c                copy branch weights for this node to single dimension array 
+                 do iBR=1,nBR(iFlt2,iNode)
+                   wt_cum(iBR) = wt_cum(iFlt2,iNode,iBR)
+                 enddo              
+                 call GetRandom1 ( iseed, nBR(iFlt2,iNode), wt_cum, mcBR, MAX_FLT, 3 )
+                 jBR(iFlt2,iNode) = mcBR
+               else
+                 jBR(iFlt2,iNode) = jBR(kFlt2,iNode)
+               endif
+              enddo
+              
+              mcParam = paramIndex(iFlt2,iBR4,iBR5,iBR_Act,iBR11)
+              mcWidth = widthIndex (iFlt2,iBR1,iBR2)
+              mcFtype = ftypeIndex (iFlt2,iBR3)
 
 c             Add the sampled hazard curve to the total hazard
               Haz1(iSample,iInten) = Haz1(iSample,iInten) 
@@ -358,7 +420,8 @@ c           Only keep if it is the desired spectral period
       read (nwr,'( a80)') dummy
       write (*,'( a80)') dummy
       stop 99   
- 201  write (*,'( 2x,''Error reading haz line in out1'',5i5 )') iflt, iWidth, iProb, iAtten, iFtype, i
+ 201  write (*,'( 2x,''Error reading haz line in out1'',5i5 )') iflt, iWidth,
+     1          iProb, iAtten, iFtype, i
       backspace (nwr)
       read (nwr,'( a80)') dummy
       write (*,'( a80)') dummy
@@ -366,3 +429,19 @@ c           Only keep if it is the desired spectral period
       end
 
 c -------------------------------------------------------------------------
+
+      subroutine CheckCorr (iBr, nCorr1, corrNode, corrNflt, corrFlt, iFlt2, iFltCorr )
+      implicit none
+      integer iBr, nCorr1
+      integer nCorr1, corrNode(100), corrNFlt(100), corrFlt(100,MAX_FLT)
+
+      iFltCorr = 0
+      do jFlt2=1,iFlt2-1
+        do i=1,nCorr1
+          if (corrNode(i) .eq. iBr ) then
+            do j=1,corrNFlt(i)
+            enddo
+          endif
+          read (31,*) corrNode(i), corrNFlt(i)
+          read (31,*) (corrFlt(i,j),j=1,corrNFlt(i))
+        enddo
