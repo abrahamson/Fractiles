@@ -1,46 +1,76 @@
-c --------------------------
-
-      subroutine Rd_Fault_Data  (nFltTotal, nFlt0, f_start, f_num, AttenType, 
-     1           n_Dip, n_bValue, nActRate,  nSR,   nRecInt,   nMoRate,   nMagRecur,  
-     1           nThick1,      nRefMag,  nFtypeModels,
-     2           dipWt, bValueWt, actRateWt, wt_sr, wt_recInt, wt_MoRate, magRecurWt, 
-     2           faultThickWt, refMagWt, ftmodelwt,
-     3           nFtype, ftype_wt1, wt_RateMethod, al_Segwt, 
-     4           nRate, rateType, nBR_SSC, nSegModel1, segwt1, segFlag, indexRate, fname)
+      
+      subroutine Rd_Fault_Data (version, nFltTotal,nFlt0, probAct, AttenType, 
+     2           nSegModel, cumWt_segModel, nFtype, wt_ftype, f_start, f_num,
+     1           faultFlag, al_Segwt, nBR_all, wt_cum_all, fname )
 
       implicit none
-      include 'tornado.h'
-      integer nSegModel1(MAX_FLT), segFlag(MAX_FLT, MAX_SEG), iSeg
-      real segwt1 (MAX_FLT,MAX_SEG)
+      include 'fract.h'
+      
+      integer Attentype(MAX_FLT),
+     1        nFlt0, nFtype(MAX_FLT), faultflag(MAX_FLT,MAX_SEG,MAX_FLT),
+     2        f_start(1), f_num(1), nSegModel(1), nFltTotal
+      real al_segWt(MAX_FLT), cumWt_segModel(MAX_FLT,MAX_SEG), version, 
+     1     ProbAct(MAX_FLT)
+      character*80 fname(MAX_FLT) 
+      real wt_cum_all(MAX_FLT,12,10,10)
+      integer nBR_all(MAX_FLT,MAXPARAM,10)
+      real wt_ftype(MAX_FLT,5,5)
 
-      integer nFltTotal, nFlt0, f_start(MAX_FLT), f_num(MAX_FLT)
-      integer faultflag(MAX_FLT,MAX_SEG,MAX_FLT), nBR_SSC(MAX_FLT,MAX_BR)
+      if (version .eq. 45.1) then
+          call Rd_Fault_Data_45_1 (nFltTotal, nFlt0, Wt_cum_all, nBR_all, 
+     1           probAct, cumWt_segModel, nSegModel, AttenType, wt_Ftype, 
+     2           nFtype, f_start, f_num, faultFlag, al_Segwt, fname )
+    
+      elseif (version .eq. 45.2) then
+          call Rd_Fault_Data_45_2 (nFltTotal, nFlt0, Wt_cum_all, nBR_all, 
+     1           probAct, cumWt_segModel, nSegModel, AttenType, wt_Ftype, 
+     2           nFtype, f_start, f_num, faultFlag, al_Segwt, fname )
+      else
+          write (*,*) 'Incompatible fault file, use Haz45.2 or Haz45.1'
+          stop 99
+      endif
+        
+      return 
+      end
+      
+c ----------------------------------------------------------------------
 
-      integer nSegModel(MAX_FLT), n_Dip(MAX_FLT),n_bvalue(MAX_FLT), nActRate(MAX_FLT), 
-     1        nSR(MAX_FLT), nRecInt(MAX_FLT), nMoRate(MAX_FLT)
-      integer nMagRecur(MAX_FLT), nThick1(MAX_FLT), nRefMag(MAX_FLT,MAX_WIDTH), nFtypeModels(MAX_FLT)
-      integer Attentype(MAX_FLT)
-      integer nFtype(MAX_FLT,MAXPARAM), rateType(MAX_FLT,MAXPARAM), Nrate(MAX_FLT)
-      integer indexrate(MAX_FLT,4)
+      subroutine Rd_Fault_Data_45_1 (nFltTotal, nFlt0, Wt_cum_all, nBR_all, 
+     1           probAct, 
+     1           cumWt_segModel, nSegModel, AttenType, wt_Ftype, 
+     2           nFtype, f_start, f_num, faultFlag, al_Segwt, fname )
 
-      real al_segWt(MAX_FLT)
-
-      real segwt(MAX_FLT,MAX_FLT), dipWt(MAX_FLT,MAXPARAM), bValueWt(MAX_FLT,MAXPARAM), actRateWt(MAX_FLT,MAXPARAM), 
-     1     wt_SR(MAX_FLT,MAXPARAM), wt_RecInt(MAX_FLT,MAXPARAM), wt_MoRate(MAX_FLT,MAXPARAM), magRecurWt(MAX_FLT,MAXPARAM),    
-     1     faultWidthWt(MAX_FLT,MAXPARAM),  faultThickWt(MAX_FLT,MAXPARAM), 
-     2     refMagWt(MAX_FLT,MAX_Width,MAXPARAM), ftmodelwt(MAX_FLT,MAXPARAM)
-      real wt_rateMethod(MAX_FLT,4)
-
-      real ftype_wt1(MAX_FLt,MAXPARAM,5)
-      real ftype1(10,10)
-
-      integer iCoor, nFLT2, iFlt, iFlt2, nsyn, nfp, iDepthModel, iOverRideMag
-      integer iFLt0, k, i, isourceType, insyn, synflag, directflag, ipt, nDownDip, ii
-      integer iRecur, iThick, iThick1, iFM
-      character*80 fName1, fName(MAX_FLT) 
-      real flat, flong, fz, sampleStep, minmag, sigArea, sigWidth
-      real probAct0, magsyn, dip1, top, x(100), x2(100,100) 
-      real bValue2, actRate
+      implicit none
+      include 'fract.h'
+      
+      integer Attentype(MAX_FLT),
+     1        nFlt0, nFlt2, nFm, nFtype(MAX_FLT,MAXPARAM),
+     2        nThick1, directflag, synflag, 
+     3        nSR, nActRAte, nRecInt, n_Dip, nRefMag(MAX_WIDTH), 
+     4        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), nsyn, nFltTotal
+      integer f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT),
+     1        iflt, iflt0, iflt2, k, i, iCoor, isourceType,
+     2        iFM, nRupArea, nRupWidth, iThick, iThick1, nMoRate,
+     3        nMagRecur, n_bValue, ii, ipt, nDownDip, insyn, iRecur,
+     4        iDepthModel, nfp 
+      real segwt(MAX_FLT,MAX_FLT), al_segWt(MAX_FLT), minmag, magstep, 
+     1     magRecurWt(MAXPARAM), dipWt(MAXPARAM), bValueWt(MAXPARAM), minDepth, 
+     4     x(MAXPARAM), ProbAct(MAX_FLT) 
+      real ftmodelwt(MAXPARAM), ftype1(MAXPARAM,MAXPARAM), 
+     1      magsyn, rupsyn, jbsyn, 
+     2     seismosyn, hyposyn, wtsyn, wt_srBranch, wt_recIntBranch, wt_SR(MAXPARAM), 
+     3     wt_RecInt(MAXPARAM), bValue2(MAXPARAM), actRate(MAXPARAM), 
+     4     actRateWt(MAXPARAM), wt_MoRate(MAXPARAM)
+      real faultThickWt(MAX_WIDTH), refMagWt(MAX_WIDTH,MAXPARAM), fZ,
+     1     hxStep, hyStep,
+     2     probAct0, sampleStep, dip1, top, fLong, fLat, wt_ActRateBranch,
+     3     wt_MoRateBranch, sigArea, sigWidth, sum, attensyn, hwsyn, ftypesyn
+      character*80 fName1, fName(MAX_FLT)
+      
+      real wt_cum_all(MAX_FLT,12,10,10)
+      integer nBR_all(MAX_FLT,MAXPARAM,10), iNode, iBR, iOverRideMag
+      real cumWt_segModel(MAX_FLT,MAX_FLT)
+      real wt_ftype(MAX_FLT,5,5)
 
 C     Input Fault Parameters
       read (10,*) iCoor
@@ -51,14 +81,23 @@ C     Input Fault Parameters
       iflt = 0
 
 C.....Loop over each fault in the source file....
-      DO iFlt0=1,NFLT0
+      DO 900 iFlt0=1,NFLT0
         read (10,'( a80)') fName1
         read (10,*) probAct0
 
 c       Read number of segmentation models for this fault system       
         read (10,*) nSegModel(iFlt0)
-          call CheckDim ( nSegModel(iFlt0), MAX_SEG, 'MAX_SEG   ' )
         read (10,*) (segWt(iFlt0,k),k=1,nSegModel(iFlt0))
+
+C       Set up cum wt for segment models for this fault system
+        do k=1,nSegModel(iFlt0)
+          if ( k .eq. 1) then
+            cumWt_segModel(iFlt0,1) = segWt(iFlt0,1)
+          else
+            cumWt_segModel(iFlt0,k) = segWt(iFlt0,k) + cumWt_segModel(iFlt0,k-1)
+          endif
+        enddo
+        
 
 c       Read total number of fault segments for this fault system
         read (10,*) nFlt2
@@ -75,27 +114,19 @@ C.......Loop over number of individual fault segments....
         do iflt2=1,nflt2
 
           iFlt = iFlt + 1
-           
           call CheckDim ( iflt, MAX_FLT, 'MAX_FLT   ' )
-
-c         Set up segmentation cases and weights by individual faults
-          nSegModel1(iFlt) = nSegModel(iFlt0)
-          nBR_SSC(iFLt,12) = nSegModel1(iFlt) 
-          do iSeg=1,nSegModel1(iFlt)
-            segwt1(iFlt,iSeg) = segWt(iFlt0,iSeg)
-            segFlag(iFlt,iSeg) = faultFlag(iFlt0,iSeg,iflt2)
-          enddo
 
 c         Read past name of this segment
           read(10,'( a80)') fname(iFlt)
-
           read (10,*) isourceType, attenType(iFlt), sampleStep, directflag, synflag
+
+          write (*,'( 2x,''iFlt'',i5, 2x,a80)') iFlt, fname(iFLt)
 
 c         Read past the synchronous Rupture parameters
           if (synflag .gt. 0) then
-            read (10,*) nsyn
+            read (10,*) nsyn, attensyn
             do insyn=1,nsyn
-              read (10,*) magsyn
+              read (10,*) magsyn, rupsyn, jbsyn, seismosyn, hwsyn,ftypesyn, hyposyn, wtsyn
             enddo
           endif
 
@@ -136,180 +167,576 @@ c........   Only read in the first downdip case - rest is not needed...
 
 c         Read dip Variation
           if ( isourceType .ne. 5 ) then
-            read (10,*) n_Dip(iflt)
-            nBR_SSC(iFLt,1) = n_Dip(iflt)
-            read (10,*) (x(i),i=1,n_Dip(iflt))
-            read (10,*) (dipWt(iFlt,i),i=1,n_Dip(iflt))
+            read (10,*) n_Dip
+            read (10,*) (x(i),i=1,n_Dip)
+            read (10,*) (dipWt(i),i=1,n_Dip)
           else
-            n_Dip(iflt) = 1
-            dipWt(iFlt,1) = 1.
+            n_Dip = 1
+            x(1) = 0.
+            dipWt(1) = 1.
           endif
 
 c         Read b-values (not for activity rate cases)
-          read (10,*) n_bValue(iFlt)
-          nBR_SSC(iFLt,11) = n_bValue(iFlt)
-          if ( n_bValue(iFlt) .gt. 0 ) then
-            read (10,*) (x(i),i=1,n_bValue(iFlt))
-            read (10,*) (bValueWt(iFlt,i),i=1,n_bValue(iFlt))
+          read (10,*) n_bValue
+          call CheckDim ( n_bValue, MAX_N1, 'MAX_N1    ' )
+          if ( n_bValue .gt. 0 ) then
+            read (10,*) (x(i),i=1,n_bValue)
+            read (10,*) (bValueWt(i),i=1,n_bValue)
           endif
-                
+
 c         Read activity rate - b-value pairs
-          read (10,*) nActRate(iFlt)
-          nBR_SSC(iFLt,8) = nActRate(iFlt)
-          if ( nActRate(iFlt) .ne. 0 ) then
-            do ii=1,nActRate(iFlt)
-              read (10,*) bValue2, actRate, actRateWt(iFlt,ii)
+          read (10,*) nActRate 
+          if ( nActRate .ne. 0 ) then
+            do ii=1,nActRate
+              read (10,*) bValue2(ii), actRate(ii), actRateWt(ii)
             enddo
           endif
 
 c         Read weights for rate methods
-          read (10,*) (wt_RateMethod(iFlt,i), i=1,4)
-          nBR_SSC(iFLt,6) = 4
-
-          nRate(iFlt) = 0
-c         Read slip-rates
-          read (10,*) nSR(iFlt)
-          nBR_SSC(iFLt,7) = nSR(iFlt)
-          if ( nSR(iFlt) .gt. 0 ) then
-            read (10,*) (x(k),k=1,nSR(iFlt))
-            read (10,*) (wt_sr(iFlt,k),k=1,nSR(iFlt))
+          read (10,*) wt_srBranch, wt_ActRateBranch, wt_recIntBranch, wt_MoRateBranch
+          sum = wt_srBranch + wt_ActRateBranch + wt_recIntBranch + wt_MoRateBranch
+          if ( sum .lt. 0.999 .or. sum .gt. 1.001 ) then
+              write (*,'( 2x,''rate method weights do not sum to unity for fault, '',a30)') fName(iFLt)
+              stop 99
           endif
-          do i=1,nSR(iFLt)
-            nRate(iFlt) = nRate(iFlt) + 1
-            RateType(iFLt,nRate(iFlt)) = 1
-          enddo
 
-          do i=1,nActRate(iFlt)
-            nRate(iFlt) = nRate(iFlt) + 1
-            RateType(iFLt,nRate(iFlt)) = 2
-          enddo
+c         Read slip-rates
+          read (10,*) nSR
+          if ( nSR .gt. 0 ) then
+            read (10,*) (x(k),k=1,nSR)
+            read (10,*) (wt_sr(k),k=1,nSR)
+          endif
 
 c         Read recurrence intervals
-          read (10,*) nRecInt(iFlt)
-          nBR_SSC(iFLt,9) = nRecInt(iFlt)
-          if ( nRecInt(iFlt) .gt. 0 ) then
-            read (10,*) (x(k),k=1,nRecInt(iFlt))
-            read (10,*) (wt_recInt(iFlt,k),k=1,nRecInt(iFlt))
+          read (10,*) nRecInt
+          if ( nRecInt .gt. 0 ) then
+            read (10,*) (x(k),k=1,nRecInt)
+            read (10,*) (wt_recInt(k),k=1,nRecInt)
           endif
-          do i=1,nRecInt(iFLt)
-            nRate(iFLt) = nRate(iFlt) + 1
-            RateType(iFLt,nrate(iFLt)) = 3
-          enddo
 
 c         Read moment-rates
-          read (10,*) nMoRate(iFlt)
-          nBR_SSC(iFLt,10) = nMoRate(iFlt)
-          if ( nMoRate(iFlt) .gt. 0 ) then
-            read (10,*) (x(k),k=1,nMoRate(iFlt))
-            read (10,*) (x(k),k=1,nMoRate(iFlt))
-            read (10,*) (wt_MoRate(iFlt,k),k=1,nMoRate(iFlt))
+          read (10,*) nMoRate
+          if ( nMoRate .gt. 0 ) then
+            read (10,*) (x(k),k=1,nMoRate)
+            read (10,*) (x(k),k=1,nMoRate)
+            read (10,*) (wt_MoRate(k),k=1,nMoRate)
           endif
-          do i=1,nRecInt(iFLt)
-            nRate(iFLt) = nRate(iFlt) + 1
-            RateType(iFLt,nrate(iFLt)) = 4
-          enddo
-          indexRate(iFlt,1) = 0
-          indexRate(iFlt,2) = indexRate(iFlt,1) + nSR(iFlt)
-          indexrate(iFlt,3) = indexRate(iFlt,2) + nActRate(iFlt)
-          indexrate(iFlt,4) = indexRate(iFlt,3) + nRecInt(iFlt)
 
-
-                                   
 c         Read Mag recurrence weights (char and exp)
-          read (10,*) nMagRecur(iFlt)
-          nBR_SSC(iFLt,4) = nMagRecur(iflt)
-          read (10,*) (x(i),i=1,nMagRecur(iFlt))
-          read (10,*) (magRecurWt(iFlt,i),i=1,nMagRecur(iFlt))
+          read (10,*) nMagRecur
+          call CheckDim ( nMagRecur, MAX_N1, 'MAX_N1    ' )
+          read (10,*) (x(i),i=1,nMagRecur)
+          read (10,*) (magRecurWt(i),i=1,nMagRecur)
 
 c         Read past corresponding magnitude parameters. 
-          do iRecur=1,nMagRecur(iFlt)
+          do iRecur=1,nMagRecur
             read (10,*) x(iRecur), x(iRecur), x(iRecur)
           enddo
 
 c         Read seismogenic thickness
           if ( isourceType .ne. 5) then
-            read (10,*) nThick1(iFlt)
-            nBR_SSC(iFLt,2) = nThick1(iFlt)
-            read (10,*) (x(i),i=1,nThick1(iFlt))
-            read (10,*) (faultThickWt(iFlt,i),i=1,nThick1(iFlt))
+            read (10,*) nThick1
+            call CheckDim ( nThick1, MAX_WIDTH, 'MAX_WIDTH ' )
+            read (10,*) (x(i),i=1,nThick1)
+            read (10,*) (faultThickWt(i),i=1,nThick1)
           else
-            nThick1(iFlt) = 1
-            faultThickWt(iFlt,1) = 1.
+            nThick1 = 1
+            faultThickWt(1) = 1.
           endif
-         
+
 c         Read depth pdf
           read (10,*) iDepthModel       
 
-c         Read Mag method (scaling relations or set values)
-          read (10,*) iOverRideMag
+c        Read Mag method (scaling relations or set values)
+         read (10,*) iOverRideMag
+         if ( iOverRideMag .ne. 1 ) then
+           write (*,'( 2x,''iOverRideMag flag option not working'')') 
+           stop 99
+         endif
 
 c         Read reference mags for each fault thickness
-          iThick = 1
-          nBR_SSC(iFLt,5) = 0 
-          do iThick1=1,nThick1(iFlt)
-            read (10,*) nRefMag(iFlt,iThick)
-            read (10,*) (x2(iThick,i),i=1,nRefMag(iFlt,iThick))
-            nBR_SSC(iFLt,5) = nBR_SSC(iFLt,5) + nRefMag(iFlt,iThick)
-            read (10,*) (refMagWt(iFlt,iThick,i),i=1,nRefMag(iFlt,iThick))
-            iThick = iThick + 1              
+          do iThick=1,nThick1
+            read (10,*) nRefMag(iThick)
+            read (10,*) (x(i),i=1,nRefMag(iThick))
+            read (10,*) (refMagWt(iThick,i),i=1,nRefMag(iThick))
           enddo
 
 c         Read Past remaining input for this fault
-          read (10,*) minMag
+          read (10,*) minMag, magStep, hxStep, hyStep, nRupArea, nRupWidth, minDepth
           read (10,*) (x(k),k=1,2), sigArea
           read (10,*) (x(k),k=1,2), sigWidth
 
 c         Read ftype Models
-          read (10,*) nFtypeModels(iFlt)
-          nBR_SSC(iFLt,3) = 0
-          do iFM=1,nFtypeModels(iFlt)
-            read (10,*) ftmodelwt(iFlt,iFM)
+          read (10,*) nFM
+          do iFM=1,nFM
+            read (10,*) ftmodelwt(iFM)
             read (10,*) nFtype(iFlt,iFM)
             read (10,*) (ftype1(iFM,k),k=1,nFtype(iFlt,iFM))
-            read (10,*) (ftype_wt1(iFlt,iFM,k), k=1,nFtype(iFlt,iFM))
-            nBR_SSC(iFLt,3) = nBR_SSC(iFLt,3) + nFtype(iFlt,iFM)
+            read (10,*) (wt_ftype(iFlt,iFM,k), k=1,nFtype(iFlt,iFM))
           enddo
 
-c        Load into single array for rates          
-         nRate = nSR + nActRate + nRecInt + nMoRate
-         call CheckDim ( nRate, MAX_N1, 'MAX_N1    ' )
-         do k=1,nSR
-            rateParam1(k) = sr(k)
-            rateWt1(k) = wt_sr(k)*wt_srbranch              
-            rateType1(k) = 1
-            MoRDepth(k) = 1.0
-         enddo
-         do k=1,nActRate
-            rateParam1(k+nSR) = actRate(k)
-            rateWt1(k+nSR) = actRateWt1(k) * wt_actRateBranch             
-            rateType1(k+nSR) = 2
-            MoRDepth(k+nSR) = 1.0
-         enddo
-         do k=1,nRecInt
-            rateParam1(k+nSR+nActRate) = rec_Int(k)
-            rateWt1(k+nSR+nActRate) = wt_recInt(k) *wt_recIntBranch              
-            rateType1(k+nSR+nActRate) = 3
-            MoRDepth(k+nSR+nActRate) = 1.0
-         enddo
-         do k=1,nMoRate
-            rateParam1(k+nSR+nActRate+nRecInt) = MoRate(k)
-            rateWt1(k+nSR+nActRate+nRecInt) = wt_MoRate(k) *wt_MoRateBranch              
-            rateType1(k+nSR+nActRate+nRecInt) = 4
-            MoRDepth(k+nSR+nActRate+nRecInt) = 1.0/MoRateDepth(nMoRate)
-         enddo
-          
+c         Add index on thickness because the refMag is correlated with thickness
+c         For other param, just enter them for each of the thickness to make this easier to track
+          do iThick=1,nThick1
 
+c          Load seismo thickness wts into global cumulative wt array
+           iNode = 1
+           nBR_all(iflt,iNode,iThick) = nThick1
+           wt_cum_all(iflt,iNode,iThick,1) = faultThickWt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+            wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + faultThickWt(iBR)
+           enddo
+
+c          Load dip wts into global cumulative wt array (node 1)
+           iNode = 2
+           nBR_all(iflt,iNode,iThick) = n_Dip
+           wt_cum_all(iflt,iNode,iThick,1) = dipWt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+            wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + dipWt(iBR)
+           enddo
+
+c          Load Ftype Model wts into global cumulative wt array
+           iNode = 3
+           nBR_all(iflt,iNode,iThick) = nFM
+           wt_cum_all(iflt,iNode,iThick,1) = ftmodelwt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+             wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + ftmodelwt(iBR)
+           enddo
+
+c          Load Mag Recur  wts into global cumulative wt array
+           iNode = 4
+           nBR_all(iflt,iNode,iThick) = nMagRecur
+           wt_cum_all(iflt,iNode,iThick,1) = magRecurWt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+             wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + magRecurWt(iBR)
+           enddo
+
+c          Load ref mag  wts into global cumulative wt array
+           iNode = 5
+           nBR_all(iflt,iNode,iThick) = nRefMag(iThick)
+           wt_cum_all(iflt,iNode,iThick,1) = refMagWt(ithick,1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+             wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) 
+     1               + refMagWt(ithick,iBR)
+           enddo
+
+c          Load rate method wts into global cumulative wt array
+           iNode = 6
+           nBR_all(iflt,iNode,iThick) = 4
+           wt_cum_all(iflt,iNode,iThick,1) = wt_srBranch
+           wt_cum_all(iflt,iNode,iThick,2) = wt_ActRateBranch +  wt_cum_all(iflt,iNode,iThick,1)
+           wt_cum_all(iflt,iNode,iThick,3) = wt_recIntBranch +  wt_cum_all(iflt,iNode,iThick,2)
+           wt_cum_all(iflt,iNode,iThick,4) = wt_MoRateBranch +  wt_cum_all(iflt,iNode,iThick,3)
+
+c          Load slip-rate wts into global cumulative wt array
+           iNode = 7
+           nBR_all(iflt,iNode,iThick) = nSR
+           if ( nSR .ne. 0 ) then
+             wt_cum_all(iflt,iNode,iThick,1) = wt_sr(1)
+             do iBR=2,nBR_all(iflt,iNode,iThick)
+               wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + wt_sr(iBR)
+             enddo
+           endif
+                
+c          Load activity rate - b-value pairs wts into global cumulative wt array
+           iNode = 8
+           nBR_all(iflt,iNode,iThick) = nActRate
+           if ( nActRate .ne. 0 ) then
+            wt_cum_all(iflt,iNode,iThick,1) = actRateWt(1)
+            do iBR=2,nBR_all(iflt,iNode,iThick)
+              wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + actRateWt(iBR)
+            enddo
+           endif
+
+c          Load recurrence intervals wts into global cumulative wt array
+           iNode = 9
+           nBR_all(iflt,iNode,iThick) = nRecInt
+           if ( nRecInt .ne. 0 ) then
+            wt_cum_all(iflt,iNode,iThick,1) = wt_recInt(1)
+            do iBR=2,nBR_all(iflt,iNode,iThick)
+              wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + wt_recInt(iBR)
+            enddo
+           endif
+
+c          Load recurrence intervals wts into global cumulative wt array
+           iNode = 10
+           nBR_all(iflt,iNode,iThick) = nMoRate
+           if ( nMoRate .ne. 0 ) then
+            wt_cum_all(iflt,iNode,iThick,1) = wt_MoRate(1)
+            do iBR=2,nBR_all(iflt,iNode,iThick)
+              wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + wt_MoRate(iBR)
+            enddo
+           endif
+                       
+c          Load b-values wts into global cumulative wt array (node 11)
+           iNode = 11
+           nBR_all(iflt,iNode,iThick) = n_bValue
+           wt_cum_all(iflt,iNode,iThick,1) = bValueWt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+            wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + bValueWt(iBR)
+           enddo
+
+c          End of Loop over iThick1
+          enddo
+                   
+         probAct(iFlt) = probAct0
+         
 c       End of Loop over iFlt2 - number of segments    
         enddo
 
 c     End of Loop over iFlt
-      enddo
+  900 continue
       nFltTotal = iFlt
-
+      
       return
       end
 
-c ----------------------------------------------------------
+c -------------------
 
+      subroutine Rd_Fault_Data_45_2 (nFltTotal, nFlt0, Wt_cum_all, nBR_all, 
+     1           probAct, 
+     1           cumWt_segModel, nSegModel, AttenType, wt_Ftype, 
+     2           nFtype, f_start, f_num, faultFlag, al_Segwt, fname )
 
+      implicit none
+      include 'fract.h'
+      
+      integer Attentype(MAX_FLT),
+     1        nFlt0, nFlt2, nFm, nFtype(MAX_FLT,MAXPARAM),
+     2        nThick1, directflag, synflag, 
+     3        nSR, nActRAte, nRecInt, n_Dip, nRefMag(MAX_WIDTH), 
+     4        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), nsyn, nFltTotal
+      integer f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT),
+     1        iflt, iflt0, iflt2, k, i, iCoor, isourceType,
+     2        iFM, nRupArea, nRupWidth, iThick, iThick1, nMoRate,
+     3        nMagRecur, n_bValue, ii, ipt, nDownDip, insyn, iRecur,
+     4        iDepthModel, nfp 
+      real segwt(MAX_FLT,MAX_FLT), al_segWt(MAX_FLT), minmag, magstep, 
+     1     magRecurWt(MAXPARAM), dipWt(MAXPARAM), bValueWt(MAXPARAM), minDepth, 
+     4     x(MAXPARAM), ProbAct(MAX_FLT) 
+      real ftmodelwt(MAXPARAM), ftype1(MAXPARAM,MAXPARAM), 
+     1      magsyn, rupsyn, jbsyn, 
+     2     seismosyn, hyposyn, wtsyn, wt_srBranch, wt_recIntBranch, wt_SR(MAXPARAM), 
+     3     wt_RecInt(MAXPARAM), bValue2(MAXPARAM), actRate(MAXPARAM), 
+     4     actRateWt(MAXPARAM), wt_MoRate(MAXPARAM)
+      real faultThickWt(MAX_WIDTH), refMagWt(MAX_WIDTH,MAXPARAM), fZ,
+     1     hxStep, hyStep,
+     2     probAct0, sampleStep, dip1, top, fLong, fLat, wt_ActRateBranch,
+     3     wt_MoRateBranch, sigArea, sigWidth, sum, attensyn, hwsyn, ftypesyn
+      character*80 fName1, fName(MAX_FLT)
+      
+      real wt_cum_all(MAX_FLT,12,10,10)
+      integer nBR_all(MAX_FLT,MAXPARAM,10), iNode, iBR
+      real cumWt_segModel(MAX_FLT,MAX_FLT)
+      real wt_ftype(MAX_FLT,5,5)
 
+C     Input Fault Parameters
+      read (10,*) iCoor
+      read (10,*) NFLT0
+
+      call CheckDim ( NFLT0, MAX_FLT, 'MAX_FLT' )
+  
+      iflt = 0
+
+C.....Loop over each fault in the source file....
+      DO 900 iFlt0=1,NFLT0
+        read (10,'( a80)') fName1
+        read (10,*) probAct0
+
+c       Read number of segmentation models for this fault system       
+        read (10,*) nSegModel(iFlt0)
+        read (10,*) (segWt(iFlt0,k),k=1,nSegModel(iFlt0))
+
+C       Set up cum wt for segment models for this fault system
+        do k=1,nSegModel(iFlt0)
+          if ( k .eq. 1) then
+            cumWt_segModel(iFlt0,1) = segWt(iFlt0,1)
+          else
+            cumWt_segModel(iFlt0,k) = segWt(iFlt0,k) + cumWt_segModel(iFlt0,k-1)
+          endif
+        enddo
+
+c       Read total number of fault segments for this fault system
+        read (10,*) nFlt2
+        do i=1, nSegModel(iFlt0)
+         read (10,*) (faultFlag(iFlt0,i,k),k=1,nFlt2)
+        enddo
+
+c       Set the index for the first fault in this fault system and the number
+c       This allows us to find the right fault from the large list
+        f_start(iFlt0) = iFlt + 1
+        f_num(iFlt0) = nFlt2 
+
+C.......Loop over number of individual fault segments....                        
+        do iflt2=1,nflt2
+
+          iFlt = iFlt + 1
+          call CheckDim ( iflt, MAX_FLT, 'MAX_FLT   ' )
+
+c         Read past name of this segment
+          read(10,'( a80)') fname(iFlt)
+          read (10,*) isourceType, attenType(iFlt), sampleStep, directflag, synflag
+
+          write (*,'( 2x,''iFlt'',i5, 2x,a80)') iFlt, fname(iFLt)
+
+c         Read past the synchronous Rupture parameters
+          if (synflag .gt. 0) then
+            read (10,*) nsyn, attensyn
+            do insyn=1,nsyn
+              read (10,*) magsyn, rupsyn, jbsyn, seismosyn, hwsyn,ftypesyn, hyposyn, wtsyn
+            enddo
+          endif
+
+c         Read aleatory segmentation wts
+          read (10,*) al_segWt(iFlt)
+
+c         Check for standard fault source or areal source
+          if ( isourceType .eq. 1 .or. isourceType .eq. 2) then
+            read (10,*) dip1, top
+            read(10,*) nfp     
+            do ipt=1,nfp
+              read (10,*) fLong, fLat
+            enddo
+          endif
+
+c         Check for grid source (w/o depth)
+          if ( isourceType .eq. 3 .or. isourceType .eq. 7 ) then
+            read (10,*)  dip1, top
+c           Read past grid filename...
+            read (10,*)
+          endif
+
+c         Check for grid source (w/ depth)
+          if ( isourceType .eq. 4 ) then
+            read (10,*)  dip1
+c           Read over grid filename...
+            read (10,*)
+          endif
+
+c         Check for custom fault source
+          if ( isourceType .eq. 5) then
+            read(10,*) nDownDip, nfp
+c........   Only read in the first downdip case - rest is not needed...
+            do ipt=1,nfp
+              read (10,*) fLong, fLat, fZ
+            enddo
+          endif
+
+c         Read dip Variation
+          if ( isourceType .ne. 5 ) then
+            read (10,*) n_Dip
+            read (10,*) (x(i),i=1,n_Dip)
+            read (10,*) (dipWt(i),i=1,n_Dip)
+          else
+            n_Dip = 1
+            x(1) = 0.
+            dipWt(1) = 1.
+          endif
+
+c         Read b-values (not for activity rate cases)
+          read (10,*) n_bValue
+          call CheckDim ( n_bValue, MAX_N1, 'MAX_N1    ' )
+          if ( n_bValue .gt. 0 ) then
+            read (10,*) (x(i),i=1,n_bValue)
+            read (10,*) (bValueWt(i),i=1,n_bValue)
+          endif
+
+c         Read activity rate - b-value pairs
+          read (10,*) nActRate 
+          if ( nActRate .ne. 0 ) then
+            do ii=1,nActRate
+              read (10,*) bValue2(ii), actRate(ii), actRateWt(ii)
+            enddo
+          endif
+
+c         Read weights for rate methods
+          read (10,*) wt_srBranch, wt_ActRateBranch, wt_recIntBranch, wt_MoRateBranch
+          sum = wt_srBranch + wt_ActRateBranch + wt_recIntBranch + wt_MoRateBranch
+          if ( sum .lt. 0.999 .or. sum .gt. 1.001 ) then
+              write (*,'( 2x,''rate method weights do not sum to unity for fault, '',a30)') fName(iFLt)
+              stop 99
+          endif
+
+c         Read slip-rates
+          read (10,*) nSR
+          if ( nSR .gt. 0 ) then
+            read (10,*) (x(k),k=1,nSR)
+            read (10,*) (wt_sr(k),k=1,nSR)
+          endif
+
+c         Read recurrence intervals
+          read (10,*) nRecInt
+          if ( nRecInt .gt. 0 ) then
+            read (10,*) (x(k),k=1,nRecInt)
+            read (10,*) (wt_recInt(k),k=1,nRecInt)
+          endif
+
+c         Read moment-rates
+          read (10,*) nMoRate
+          if ( nMoRate .gt. 0 ) then
+            read (10,*) (x(k),k=1,nMoRate)
+            read (10,*) (x(k),k=1,nMoRate)
+            read (10,*) (wt_MoRate(k),k=1,nMoRate)
+          endif
+
+c         Read Mag recurrence weights (char and exp)
+          read (10,*) nMagRecur
+          call CheckDim ( nMagRecur, MAX_N1, 'MAX_N1    ' )
+          read (10,*) (x(i),i=1,nMagRecur)
+          read (10,*) (magRecurWt(i),i=1,nMagRecur)
+
+c         Read past corresponding magnitude parameters. 
+          do iRecur=1,nMagRecur
+            read (10,*) x(iRecur), x(iRecur), x(iRecur)
+          enddo
+
+c         Read seismogenic thickness
+          if ( isourceType .ne. 5) then
+            read (10,*) nThick1
+            call CheckDim ( nThick1, MAX_WIDTH, 'MAX_WIDTH ' )
+            read (10,*) (x(i),i=1,nThick1)
+            read (10,*) (faultThickWt(i),i=1,nThick1)
+          else
+            nThick1 = 1
+            faultThickWt(1) = 1.
+          endif
+
+c         Read depth pdf
+          read (10,*) iDepthModel       
+
+c         Read reference mags for each fault thickness
+          do iThick=1,nThick1
+            read (10,*) nRefMag(iThick)
+            read (10,*) (x(i),i=1,nRefMag(iThick))
+            read (10,*) (refMagWt(iThick,i),i=1,nRefMag(iThick))
+          enddo
+
+c         Read Past remaining input for this fault
+          read (10,*) minMag, magStep, hxStep, hyStep, nRupArea, nRupWidth, minDepth
+          read (10,*) (x(k),k=1,2), sigArea
+          read (10,*) (x(k),k=1,2), sigWidth
+
+c         Read ftype Models
+          read (10,*) nFM
+          do iFM=1,nFM
+            read (10,*) ftmodelwt(iFM)
+            read (10,*) nFtype(iFlt,iFM)
+            read (10,*) (ftype1(iFM,k),k=1,nFtype(iFlt,iFM))
+            read (10,*) (wt_ftype(iFlt,iFM,k), k=1,nFtype(iFlt,iFM))
+          enddo
+
+c         Add index on thickness because the refMag is correlated with thickness
+c         For other param, just enter them for each of the thickness to make this easier to track
+          do iThick=1,nThick1
+
+c          Load seismo thickness wts into global cumulative wt array
+           iNode = 1
+           nBR_all(iflt,iNode,iThick) = nThick1
+           wt_cum_all(iflt,iNode,iThick,1) = faultThickWt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+            wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + faultThickWt(iBR)
+           enddo
+
+c          Load dip wts into global cumulative wt array (node 1)
+           iNode = 2
+           nBR_all(iflt,iNode,iThick) = n_Dip
+           wt_cum_all(iflt,iNode,iThick,1) = dipWt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+            wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + dipWt(iBR)
+           enddo
+
+c          Load Ftype Model wts into global cumulative wt array
+           iNode = 3
+           nBR_all(iflt,iNode,iThick) = nFM
+           wt_cum_all(iflt,iNode,iThick,1) = ftmodelwt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+             wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + ftmodelwt(iBR)
+           enddo
+
+c          Load Mag Recur  wts into global cumulative wt array
+           iNode = 4
+           nBR_all(iflt,iNode,iThick) = nMagRecur
+           wt_cum_all(iflt,iNode,iThick,1) = magRecurWt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+             wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + magRecurWt(iBR)
+           enddo
+
+c          Load ref mag  wts into global cumulative wt array
+           iNode = 5
+           nBR_all(iflt,iNode,iThick) = nRefMag(iThick)
+           wt_cum_all(iflt,iNode,iThick,1) = refMagWt(ithick,1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+             wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) 
+     1               + refMagWt(ithick,iBR)
+           enddo
+
+c          Load rate method wts into global cumulative wt array
+           iNode = 6
+           nBR_all(iflt,iNode,iThick) = 4
+           wt_cum_all(iflt,iNode,iThick,1) = wt_srBranch
+           wt_cum_all(iflt,iNode,iThick,2) = wt_ActRateBranch +  wt_cum_all(iflt,iNode,iThick,1)
+           wt_cum_all(iflt,iNode,iThick,3) = wt_recIntBranch +  wt_cum_all(iflt,iNode,iThick,2)
+           wt_cum_all(iflt,iNode,iThick,4) = wt_MoRateBranch +  wt_cum_all(iflt,iNode,iThick,3)
+
+c          Load slip-rate wts into global cumulative wt array
+           iNode = 7
+           nBR_all(iflt,iNode,iThick) = nSR
+           if ( nSR .ne. 0 ) then
+             wt_cum_all(iflt,iNode,iThick,1) = wt_sr(1)
+             do iBR=2,nBR_all(iflt,iNode,iThick)
+               wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + wt_sr(iBR)
+             enddo
+           endif
+                
+c          Load activity rate - b-value pairs wts into global cumulative wt array
+           iNode = 8
+           nBR_all(iflt,iNode,iThick) = nActRate
+           if ( nActRate .ne. 0 ) then
+            wt_cum_all(iflt,iNode,iThick,1) = actRateWt(1)
+            do iBR=2,nBR_all(iflt,iNode,iThick)
+              wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + actRateWt(iBR)
+            enddo
+           endif
+
+c          Load recurrence intervals wts into global cumulative wt array
+           iNode = 9
+           nBR_all(iflt,iNode,iThick) = nRecInt
+           if ( nRecInt .ne. 0 ) then
+            wt_cum_all(iflt,iNode,iThick,1) = wt_recInt(1)
+            do iBR=2,nBR_all(iflt,iNode,iThick)
+              wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + wt_recInt(iBR)
+            enddo
+           endif
+
+c          Load recurrence intervals wts into global cumulative wt array
+           iNode = 10
+           nBR_all(iflt,iNode,iThick) = nMoRate
+           if ( nMoRate .ne. 0 ) then
+            wt_cum_all(iflt,iNode,iThick,1) = wt_MoRate(1)
+            do iBR=2,nBR_all(iflt,iNode,iThick)
+              wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + wt_MoRate(iBR)
+            enddo
+           endif
+                       
+c          Load b-values wts into global cumulative wt array (node 11)
+           iNode = 11
+           nBR_all(iflt,iNode,iThick) = n_bValue
+           wt_cum_all(iflt,iNode,iThick,1) = bValueWt(1)
+           do iBR=2,nBR_all(iflt,iNode,iThick)
+            wt_cum_all(iflt,iNode,iThick,iBR) = wt_cum_all(iflt,iNode,iThick,iBR-1) + bValueWt(iBR)
+           enddo
+
+c          End of Loop over iThick1
+          enddo
+                   
+         probAct(iFlt) = probAct0
+         
+c       End of Loop over iFlt2 - number of segments    
+        enddo
+
+c     End of Loop over iFlt
+  900 continue
+      nFltTotal = iFlt
+      
+      return
+      end

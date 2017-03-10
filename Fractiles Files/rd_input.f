@@ -1,26 +1,22 @@
 c -------------------------------------------------------------------------
 
-      subroutine RdInput ( nFlt, nFlt0, f_start, f_num, faultFlag, nInten,  
-     1           testInten, probAct, al_segWt, cumWt_SegModel, cumWt_Width, 
-     2           cumWt_param, cumWt_ftype, cumWt_GM, nSegModel, nWidth, 
-     3           nParamVar, nFtype, nGM_model, nAttenType, attenType, 
+      subroutine RdInput ( nInten,  
+     1           testInten, nGM_model, cumWt_GM, nAttenType, attenType, 
      4           nProb, iPer, SpecT1, version )
 
       implicit none
       include 'fract.h'
 
       integer nInten, ntotal, attentype(MAX_FLT), nfiles, ix(MAX_FILES),
-     1        jCalc(MAX_ATTENTYPE,MAX_ATTEN), nParamVar(MAX_FLT,MAX_WIDTH),
-     2        nWidth(MAX_FLT), nProb, nattentype, nGM_Model(MAX_ATTENTYPE), 
-     3        nFtype(MAX_FLT), faultflag(MAX_FLT,MAX_SEG,MAX_FLT), j,
-     4        f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT), jj
-      integer iprob, iPer, nFlt, nFlt0, nwr
-      real testInten(MAX_INTEN), probAct(MAX_FLT), minlat, maxlat,
-     1     minlong, maxlong, maxdist, specT, dirflag, al_segWt(MAX_FLT),
-     2     checkwt, c1, c2, wtgm(4,MAX_ATTEN), cumWt_SegModel(MAX_FLT,MAX_SEG),
-     3     cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM), sigtrunc, Varadd,
-     4     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_GM(MAX_ATTEN,MAX_ATTEN)
-      real cumwt_FTYPE(MAX_FLT,MAX_FTYPE), SpecT1, version
+     1        jCalc(MAX_ATTENTYPE,MAX_ATTEN), 
+     2        nProb, nattentype, nGM_Model(MAX_ATTENTYPE), 
+     3        jj, j
+      integer iprob, iPer,  nwr
+      real testInten(MAX_INTEN), specT, dirflag,
+     2     checkwt, c1, c2, wtgm(4,MAX_ATTEN), 
+     3     sigtrunc, Varadd,
+     4    cumWt_GM(MAX_ATTEN,MAX_ATTEN)
+      real  SpecT1, version, x
       character*80 filein, title      
 
 c     Set Data file units
@@ -41,16 +37,16 @@ c     Open Input PSHA Source/Fault file
       open (10,file=filein,status='old')
       
 C     Check for version compatibility with hazard code
-        read (20,*) version
-         if (version .ne. 45.2) then
+      read (20,*) version
+         if (version .ne. 45.1 .and. version .ne. 45.2) then
          write (*,*) 'Incompatible version of Haz45, use Haz45.2'
          stop 99
         endif
 
 c     Read in parameters for background grid.
-      read (20,*) minlat,maxlat,minlong,maxlong
+      read (20,*) x 
 
-      read (20,*) maxdist
+      read (20,*) x
 
 c     Input Title (not used) 
       read(20,'( a80)') title

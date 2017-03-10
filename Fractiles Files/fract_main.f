@@ -11,41 +11,35 @@ c     compatible with Haz45.2
       include 'fract.h'
       
       integer iPer, nFlt0, nattentype, nProb, iFlt0, iFlt1, jAttenType, jFlt,
-     1        i, j, k, jj, i1, i2, j2, nn100, iSample, mcSegModel, mcFType, 
-     2        mcWidth, mcParam, nperc, nInten, nAtten(MAX_FLT), nsite, nFlt,
+     1        i, j, k, jj, i1, i2, j2, nn100, iSample, mcSegModel, 
+     2        nperc, nInten, nAtten(MAX_FLT), nsite, nFlt,
      3        isite, iInten, nWidth(MAX_FLT), nParamVar(MAX_FLT,MAX_WIDTH),
      4        attentype(MAX_FLT), nGM_model(MAX_ATTENTYPE), nHazLevel   
-      integer iseed, nSample, nFtype(MAX_FLT), mcatten(MAX_SAMPLE), iHazLevel,
+      integer iseed, nSample, mcatten(MAX_SAMPLE), iHazLevel,
      1        f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT), iAmp,
      2        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), iFract, nPer, jPer, iperc   
       real tempx, step, testInten(MAX_INTEN), probAct(MAX_FLT),
      1     Haz(MAX_ATTEN, MAX_FLT, MAX_WIDTH, MAXPARAM, MAX_FTYPE), 
      2     al_segwt(MAX_FLT), cumWt_segModel(MAX_FLT,MAX_SEG), ran1,
-     3     cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM), x, perc(100,MAX_INTEN), 
-     4     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_Ftype(MAX_FLT,MAX_FTYPE)
+     3     x, perc(100,MAX_INTEN)
       real Haz1(MAX_SAMPLE,MAX_INTEN), sortarray(MAX_SAMPLE), mean(MAX_INTEN),
      1     cumWt_GM(MAX_ATTEN,MAX_ATTEN), hazTotal(100), UHS(MAX_PROB,5,10), 
      2     specT1(MAX_PROB), hazLevel(10), testHaz, version      
-      character*80 filein, file1
+      character*80 filein, file1, fname(MAX_FLT)
       
-      integer iCorrFlag, jFlt1, nCorr1,
-     1        corrNode(100), corrNFlt(100), corrFlt(100,MAX_FLT)
+      integer iCorrFlag, nCorr1, iFlt10, jCOrr,
+     1        corrNode(100), corrNFlt(100), corrFlt(100,MAX_FLT), iCOrr
 
-      integer n_Dip(MAX_FLT),n_bvalue(MAX_FLT), nActRate(MAX_FLT), nSR(MAX_FLT), 
-     1        nRecInt(MAX_FLT), nMoRate(MAX_FLT),
-     1        nRefMag(MAX_FLT,MAX_WIDTH), nFtypeModels(MAX_FLT)
       integer nFtype(MAX_FLT,MAXPARAM)
-      real ftype_al(MAX_FLt,MAXPARAM,5)
-      real t1, fact1
 
-      real segwt(MAX_FLT,MAX_SEG), dipWt(MAX_FLT,MAXPARAM), bValueWt(MAX_FLT,MAXPARAM), actRateWt(MAX_FLT,MAXPARAM), 
-     1     wt_SR(MAX_FLT,MAXPARAM), wt_RecInt(MAX_FLT,MAXPARAM), wt_MoRate(MAX_FLT,MAXPARAM), magRecurWt(MAX_FLT,MAXPARAM),    
-     1     faultThickWt(MAX_FLT,MAXPARAM), 
-     2     refMagWt(MAX_FLT,MAX_Width, MAXPARAM), ftmodelwt(MAX_FLT,MAXPARAM)
-      real wt_rateMethod(MAX_FLT,4)
-      integer iPer, nFlt0, f_start(MAX_FLT), f_num(MAX_FLT)
-      integer nBR_SSC(MAX_FLT,MAX_NODE), nRate(MAX_FLT), RateType(MAX_FLt,MAXPARAM)
-      integer nBR_SSC1(MAX_FLT,MAX_NODE)
+      real segwt(MAX_FLT,MAX_SEG)
+      integer nNode_SSC, iFLt2, iNode, iThick, iFtype
+      integer jBR(MAX_FLT,MAXPARAM), mcBR, iRate, nRate, iParam
+      integer iWidth, iFM, isum, iFtypeIndex
+      integer iBR, nBR_all(MAX_FLT,MAXPARAM,10)
+      real wt_cum(MAXPARAM), wt_cum_all(MAX_FLT,12,10,10),
+     1     wt_ftype(MAX_FLT,5,5)
+      integer iSave, iFlag, firstCorr(100), kflt2(12,100)
 
       
 *** need to fix: treating all ftype as epistemic
@@ -59,7 +53,7 @@ c      open (33,file='debug.out')
       write (*,*) '*************************'
       write (*,*) '*   Fractile Code for   *'
       write (*,*) '*       HAZ 45.2        *'
-      write (*,*) '*       Jul 2016        *'
+      write (*,*) '*       Mar 2017        *'
       write (*,*) '*************************'
 
 c     Open and read the run file
@@ -73,6 +67,10 @@ c     Open and read the run file
 
 c     Read correlation
       read (31,*) nCorr1
+      if ( nCorr1 .gt. 100 ) then
+        write (*,'( 2x,''Maximum number of correlations is 100'')')
+        stop 99
+      endif
       if ( nCorr1 .ne. 0 ) then
         do i=1,nCorr1
           read (31,*) corrNode(i), corrNFlt(i)
@@ -82,7 +80,8 @@ c     Read correlation
 
       read (31,'( a80)') file1
       write (*,'( a80)') file1
-      open (30,file=file1,status='new')
+      open (30,file=file1,status='unknown')
+      rewind (30)
 
       call CheckDim ( nSample, MAX_SAMPLE, 'MAX_SAMPLE ' )
 
@@ -91,25 +90,27 @@ c     Loop over each period
        read (31,*) iPer
 
 c     Read Input File
-      call RdInput ( nFlt, nFlt0, f_start, f_num, faultFlag, 
-     1     nInten,  testInten, probAct, al_segWt, 
-     3     cumWt_SegModel, cumWt_Width, cumWt_param, cumWt_ftype, cumWt_GM, 
-     4     nSegModel, nWidth, nParamVar, nFtype, nGM_model, 
+      call RdInput ( nInten,  testInten, nGM_model, cumWt_GM, 
      5     nattentype, attenType, nProb, iPer, specT1(jPer), version)
      
 c     Read Fault Data (only the if this is the first period)
       if ( jPer .eq. 1 ) then
 c       Read fault file
-        call Rd_Fault_Data  (nFlt, nFlt0, f_start, f_num, AttenType, 
-     1           n_Dip, n_bValue, nActRate,  nSR,   nRecInt,   nMoRate,   nMagRecur,  nThick,
-     1           nRefMag,  nFtypeModels,
-     2           dipWt, bValueWt, actRateWt, wt_sr, wt_recInt, wt_MoRate, magRecurWt, 
-     3           faultThickWt, refMagWt, ftmodelwt,
-     3           nFtype, ftype_al, wt_rateMethod, al_Segwt,
-     3           nRate, rateType, nBR_SSC, nSegModel, segwt, segFlag, indexRate, fname )
-      endif
+           call Rd_Fault_Data ( version, nFlt, nFlt0, probAct, attentype,
+     1          nSegModel, cumWt_segModel, nFtype, wt_ftype, f_start, f_num,
+     2          faultFlag, al_segwt, nBR_all, wt_cum_all, fname )
+        do i=1,nFlt
+          isum = 0
+          do ithick=1,nBR_all(i,1,1)
+            isum = isum + nBR_all(i,2,ithick)
+          enddo
+          nWidth(i) = isum
+        enddo
+      write (*,'( 2x,'' out of read flt'',)')
 
-c     SSC branches: 1 = Dip, 2=crustal thick, 3=ftype, 4=magpdf, 5=maxmag,
+      endif
+      
+c     SSC branches: 1=crustal thick, 2 = Dip, , 3=ftype, 4=magpdf, 5=refmag,
 c                   6=RateType, 7=SR, 8=a-value, 9=paleo, 
 c                   10=Moment, 11=b_value flt, 12=segModel
       nNode_SSC = 12
@@ -140,11 +141,16 @@ c       Loop over Inten to save memory (read haz at only one intensity value at 
 
          write (*,'( 2x,''reading out1 file for iInten='',i5)') iInten
          call read_Out1 ( nFlt, Haz, nWidth, nGM_Model, attenType,
-     1       nParamVar, natten, nFtype, iPer, nProb, iInten, nInten )
-         write (*,'( 2x,''out of read_Out1'')')         
+     1       natten, iPer, nProb, iInten, nInten )
+         write (*,'( 2x,''out of read_Out1'')')  
 
 c        Monte Carlo Sampling of Hazard
          do iSample=1,nSample
+
+c         initialize correlation flags for this realization
+          do icorr=1,nCorr1
+            firstCorr(iCorr) = 0
+          enddo         
 
           nn100 = (iSample/100)*100
           if ( nn100 .eq. iSample) then
@@ -162,11 +168,12 @@ c         (a source region may include multiple subsources)
           do iFlt0 = 1, nFlt0
 
 c           Select the seg model for this source region
-            call GetRandom1 ( iseed, nSegModel(iFlt0), cumWt_segModel, iflt0, mcSegModel, MAX_FLT, 2 )
+            call GetRandom1 ( iseed, nSegModel(iFlt0), cumWt_segModel, iFlt0, 
+     1              mcSegModel, MAX_FLT, 2  )
 
             i1 = f_start(iFlt0)
             i2 = f_start(iFlt0) + f_num(iFLt0) - 1
-
+            
             do iflt1=i1,i2
               iFlt2 = iFlt2 + 1
 
@@ -179,48 +186,120 @@ c             Reset the index to the faults in segment
 c             Skip this fault if not included in this seg model
               if (faultflag(iFlt0,mcSegModel,jFlt) .eq. 0 ) goto 50
 
-c *** fix this - Now treats aleatory ftype variability as epistemic ***
-c             Select the fault mechanism type 
-              call GetRandom1b ( iseed, nFtype(iFlt1), cumWt_Ftype, iflt1, 
-     1            mcFTYPE, MAX_FTYPE, MAX_FLT )
+c             Sample each of the SSC nodes (skip seg model node) 
+c             thickness is the first node           
+              do iNode=1,11 
 
-c             Sample each of the SSC nodes (skip seg model node)            
-              do iNode=1,nNode_SSC-1 
+c              Check if this node has branches
+               if ( nBR_all(iFlt2,iNode,1) .eq. 0 ) goto 100
 
 c              Check if this is a correlated node
-c              if so, pick the branchfor first flt in the list
+c              if so, check if this is the first sample of this correlated node
                iCorrFlag = 0
-               if ( nCorr1 .ne. 0 ) then
-                do i=1,nCorr1
-                 if ( iNode .eq. corrNode(i) .and. iFlt2 .eq. corrFlt(i,1)) then
-                   iCorrFlag = 1
-                   kFlt2 = corrFlt(i,1)
+               do i=1,nCorr1
+                 if ( iNode .eq. corrNode(i) ) then
+                   do iflt10=1,corrNFlt(i)
+                    if ( iFlt2 .eq. corrFlt(i,iflt10)) then
+                      jCorr = i
+                      if ( firstCorr(i) .eq. 0 ) then
+                        iCorrFlag = 1
+                        firstCorr(i) = 1                       
+                      else
+                        iCorrFlag = 2
+                      endif
+c                      write (*,'( 2x,''correlated node, flt, corrIndex:'',4i5)') iNode, iFlt2, i
+                    endif
+                   enddo
                  endif
-                enddo
-               endif
-               if ( iCorrFlag .eq. 0 ) then
+               enddo
+c               write (*,'( 5i5)') iNode, iFlt2,iCorrFlag
+               
+               if ( iCorrFlag .eq. 0 .or. iCorrFlag .eq. 1) then
 c                copy branch weights for this node to single dimension array 
-                 do iBR=1,nBR(iFlt2,iNode)
-                   wt_cum(iBR) = wt_cum(iFlt2,iNode,iBR)
+                 if (iNode .eq. 1 ) then
+                   ithick=1
+                 else
+                   ithick = jBR(iFlt2,1)
+                 endif
+                 do iBR=1,nBR_all(iFlt2,iNode,ithick)
+                   wt_cum(iBR) = wt_cum_all(iFlt2,iNode,ithick,iBR)
                  enddo              
-                 call GetRandom1 ( iseed, nBR(iFlt2,iNode), wt_cum, mcBR, MAX_FLT, 3 )
+                 call GetRandom0 ( iseed, nBR_all(iFlt2,iNode,ithick), wt_cum, mcBR, 
+     1                MAXPARAM, iNode, iFlt2 )
                  jBR(iFlt2,iNode) = mcBR
+ 
+c                if this is the first sample of a correlated bramch, then save for later use
+                 if ( iCorrFlag .eq. 1 ) then
+                   kflt2(iNode,jCorr) = iFlt2
+                 endif
                else
-                 jBR(iFlt2,iNode) = jBR(kFlt2,iNode)
+c                Correlated, first check if number of branches match
+                 if ( nBR_all(iFlt2,iNode,ithick) .ne. nBR_all(kFlt2(iNode,jCorr),iNode,ithick) ) then
+                   write (*,'( 2x,''Correlated nodes do not have the same number of branches'')')
+                   write (*,'( 2x,a60,i5)') fname(iFlt2), nBR_all(iFlt2,iNode,ithick)              
+                   write (*,'( 2x,a60,i5)') fname(kFlt2(iNode,jCorr)), nBR_all(kFlt2(iNode,jCorr),iNode,ithick)  
+                   stop 99
+                 endif            
+c                Set to previous selected branch 
+                 jBR(iFlt2,iNode) = jBR(kFlt2(iNode,jCorr),iNode)
+c                 write (*,'( 6i5)') iflt2, icorrFlag, kflt2(iNode,jCorr), jCorr, iNode, 
+c     1               jBR(iFlt2,iNode)
+c                 pause 'test correlated branch'
+                 
                endif
+ 100           continue
+
+              enddo
+
+c             Here, all branches are set for this fault        
+c             Set the parameter index as used in the hazard calc
+              ithick = jBR(iFlt2,1)
+              if (jBR(iFlt2,6) .eq. 1 ) then
+               iRate = jBR(iFlt2,7)
+              elseif (jBR(iFlt2,6) .eq. 2 ) then
+               iRate = nBR_all(iFlt2,7,1) + jBR(iFlt2,8)
+              elseif (jBR(iFlt2,6) .eq. 3 ) then
+               iRate = nBR_all(iFlt2,7,1)+ nBR_all(iFlt2,8,1) + jBR(iFlt2,9)
+              elseif (jBR(iFlt2,6) .eq. 4 ) then
+               iRate = nBR_all(iFlt2,7,1)+ nBR_all(iFlt2,8,1) + nBR_all(iFlt2,9,1) + jBR(iFlt2,10)
+              endif
+              nRate = nBR_all(iFlt2,7,1)+ nBR_all(iFlt2,8,1) + nBR_all(iFlt2,9,1) + nBR_all(iFlt2,9,10)           
+c             set iParam = (iMagRecur-1)*Nrate*n_b*nRefMag
+c                          + (iRate-1)*N_b*NrefMag + (ib-1)*nRefMag + iRefMag
+              iParam = (jBR(iFlt2,4)-1) * nRate * nBR_all(iflt2,11,iThick)
+     1                           * nBR_all(iflt2,5,iThick)
+     1            + (iRate-1) *  nBR_all(iflt2,11,ithick) * nBR_all(iflt2,5,ithick)
+     2            + (jBR(iFlt2,11)-1) * nBR_all(iflt2,5,ithick)
+     3            + jBR(iFlt2,5)      
+     
+c              iWidth = (ithick-1) * nDip + iDip
+              iWidth = (ithick-1) *nBR_all(iflt2,2,ithick) + jBR(iFlt2,2)
+              
+c             rename ftype model selected
+              iFM = jBR(iFlt2,3)            
+              isum = 0
+              do i2=1,iFM-1
+                isum = isum + nFtype(iflt2,i2)
               enddo
               
-              mcParam = paramIndex(iFlt2,iBR4,iBR5,iBR_Act,iBR11)
-              mcWidth = widthIndex (iFlt2,iBR1,iBR2)
-              mcFtype = ftypeIndex (iFlt2,iBR3)
+c              write (*,'( 12i5)') mcSegModel, (jBR(iFlt2,k),k=1,11)
+c              write (*,'( 12i5)') nSegModel(iflt0), (nBR_all(iflt2,k,iThick),k=1,11)
+c              write (*,'( 4i5)') iRate, iParam, iWidth, isum
 
-c             Add the sampled hazard curve to the total hazard
-              Haz1(iSample,iInten) = Haz1(iSample,iInten) 
-     1                    + Haz(mcAtten(jAttenType),iFlt1,mcWidth,mcParam,mcFtype)
-     1                    * al_segwt(iflt1)
-              mean(iInten)=mean(iInten)
-     1	 	          + Haz(mcAtten(jAttenType),iFlt1,mcWidth,mcParam,mcFtype)
-     1                    * al_segwt(iflt1)
+c             sum over aleatory ftype 
+              do iFtype=1, nFtype(iflt2,iFM)
+               iFtypeIndex = isum + iFtype
+           
+c              Add the sampled hazard curve to the total hazard
+               Haz1(iSample,iInten) = Haz1(iSample,iInten) 
+     1                    + Haz(mcAtten(jAttenType),iFlt2,iWidth,iParam,iFtypeIndex)
+     1                    * al_segwt(iflt2) * wt_ftype(iflt2,iFM,iFtype)
+     
+               mean(iInten)=mean(iInten)
+     1	 	          + Haz(mcAtten(jAttenType),iFlt2,iWidth,iParam,iFtypeIndex)
+     1                    * al_segwt(iflt2) * wt_ftype(iflt2,iFM,iFtype)
+              enddo
+
   50          continue
 
 c           end loop over faults in this flt system
@@ -326,14 +405,14 @@ c     Write UHS
 c -------------------------------------------------------------------
 
       subroutine read_Out1 ( nFlt, haz, nWidth, nGM_Model, attenType,
-     1           nParamVar, nAtten, nFtype, iPer, nProb, jInten, nInten)
+     1            nAtten, iPer, nProb, jInten, nInten)
 
       implicit none
       include 'fract.h'
 
       integer nInten, nFlt, nAtten(1), iProb, nAtten1, nWidth1, jFlt,
-     1        nParamVar(MAX_FLT,MAX_WIDTH), nWidth(MAX_FLT), nfiles,
-     2        nFtype(MAX_FLT), iPer, nProb, nwr, i, j, iFlt, jProb,  
+     1        nWidth(MAX_FLT), nfiles,
+     2        iPer, nProb, nwr, i, j, iFlt, jProb,  
      3        i1, iAtten, iWidth, iFtype, jInten, jFltWidth, nInten1,
      4        nFtype1, nParamVar1(100), nGM_Model(MAX_ATTENTYPE)
       integer attenType(MAX_FLT)
@@ -360,7 +439,7 @@ c     Open output file
 C     Check for version compatibility with hazard code
         read (nwr,*) version
          if (version .ne. 45.2) then
-         write (*,*) 'Incompatible version of Haz45, use Haz45.2'
+         write (*,*) 'Incompatible version of Haz45 out1 file, use Haz45.2'
          stop 99
         endif
         
@@ -368,7 +447,6 @@ c     Read out1 file
       do iFlt=1,nFlt  
        do iWidth=1,nWidth(iFlt)
         do jProb=1,nProb
-        
           read (nwr,*,err=200) jFlt, jFltWidth, iProb, nAtten1, nWidth1, nFtype1, 
      1         nParamVar1(iWidth),nInten1
 
@@ -378,7 +456,7 @@ C        Check for Array Dimension of haz Array.
            write (*,*) 'Change Array Parameter in FRACT.H and recompile.'
            stop 99
          endif
-         if (nWidth(iFlt) .gt. MAX_WIDTH) then
+         if (nWidth1 .gt. MAX_WIDTH) then
            write (*,*) 'MAX_WIDTH needs to be increased to ', nWidth(iFlt)
            write (*,*) 'Change Array Parameter in FRACT.H and recompile.'
            stop 99
@@ -388,15 +466,15 @@ C        Check for Array Dimension of haz Array.
            write (*,*) 'Change Array Parameter in FRACT.H and recompile.'
            stop 99
          endif
-         if (nFtype(iFlt) .gt. MAX_FTYPE) then
-           write (*,*) 'MAX_FTYPE needs to be increased to ', nFtype(iFlt)
+         if (nFtype1 .gt. MAX_FTYPE) then
+           write (*,*) 'MAX_FTYPE needs to be increased to ', nFtype1
            write (*,*) 'Change Array Parameter in FRACT.H and recompile.'
            stop 99
          endif
 
          do iAtten=1,nGM_model(attenType(iFlt))
-          do iFtype=1,nFtype(iFlt)
-           do i=1,nParamVar(iFlt,iWidth)
+          do iFtype=1,nFtype1
+           do i=1,nParamVar1(iWidth)
  	    read (nwr,*,err=201) (temp(j),j=1,nInten)
 
 c           Only keep if it is the desired spectral period
@@ -429,19 +507,3 @@ c           Only keep if it is the desired spectral period
       end
 
 c -------------------------------------------------------------------------
-
-      subroutine CheckCorr (iBr, nCorr1, corrNode, corrNflt, corrFlt, iFlt2, iFltCorr )
-      implicit none
-      integer iBr, nCorr1
-      integer nCorr1, corrNode(100), corrNFlt(100), corrFlt(100,MAX_FLT)
-
-      iFltCorr = 0
-      do jFlt2=1,iFlt2-1
-        do i=1,nCorr1
-          if (corrNode(i) .eq. iBr ) then
-            do j=1,corrNFlt(i)
-            enddo
-          endif
-          read (31,*) corrNode(i), corrNFlt(i)
-          read (31,*) (corrFlt(i,j),j=1,corrNFlt(i))
-        enddo

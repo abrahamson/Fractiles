@@ -1,5 +1,35 @@
 
 c ----------------------------
+      subroutine GetRandom0 ( iseed, n, wt, iSave, n1, iflag, iflt )
+
+      implicit none
+
+      integer iseed, i1, isave, n1, n, i, iflag, iflt
+      real ran1, wt(n1), x
+      
+c     Get random number
+      x = ran1( iseed )
+
+      do i=1,n
+        if ( x .le. wt(i) ) then
+          iSave = i
+          return
+        endif
+      enddo
+      
+      write (*,*) ' Get Random Number 1'
+      write (*,'( 2x,''Error - bad ran number or weights'')')
+      write (*,*) ' Random Number        = ', x
+      write (*,*) ' Fixed Parameter      = ', i1
+      write (*,*) ' Number of Parameters = ', n
+      do i=1,n
+         write (*,*) wt(i)
+      enddo
+      write (*,'( 2x,''iflt, iflag ='',2i5)') iflt, iflag
+      stop 99
+      end
+      
+c ----------------------------
       subroutine GetRandom1 ( iseed, n, wt, i1, iSave, n1, iflag )
 
       implicit none
