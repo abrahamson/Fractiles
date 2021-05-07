@@ -1,12 +1,12 @@
 c -------------------------------------------------------------------------
 
       subroutine RdInput (nInten, testInten, nGM_model, cumWt_GM, nAttenType,
-     1                    attenType, nProb, iPer, SpecT1, version )
+     1                    attenType, nProb, iPer, SpecT1, version, PCflag )
 
       implicit none
       include 'fract.h'
 
-      integer nInten, ntotal, attentype(MAX_FLT), nfiles,
+      integer nInten, ntotal, attentype(MAX_FLT), nfiles, PCflag,
      1        jCalc(MAX_ATTENTYPE,MAX_ATTEN), nProb, nattentype,
      2        nGM_Model(MAX_ATTENTYPE), j, jj, iprob, iPer, nwr
       real testInten(MAX_INTEN), dummy, specT, dirflag,
@@ -52,8 +52,8 @@ c     Number of Spectral Periods and Number of attenuation relations types
 
       do iprob=1,nProb
 
-C       Read period, maxeps, dir flag, and gm intensities
-        read (20,*) specT, sigtrunc, dirflag
+C       Read period, maxeps, dir flag, PC flag, and gm intensities
+        read (20,*) specT, sigtrunc, dirflag, PCflag(iProb)
         read (20,*) nInten
         call CheckDim ( nInten, MAX_INTEN, 'MAX_INTEN' )
         backspace (20)

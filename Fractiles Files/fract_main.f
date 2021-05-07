@@ -17,8 +17,8 @@ c     compatible with Haz45.3
      4        attentype(MAX_FLT), nGM_model(MAX_ATTENTYPE), nHazLevel
       integer iseed, nSample, nFtype(MAX_FLT), mcatten(MAX_SAMPLE), iHazLevel,
      1        f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT), iAmp, iPC,
-     2        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), iFract, nPer, jPer, iperc, nPC,
-     3        PCflag
+     2        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), iFract, nPer, jPer, iperc,
+     3        PCflag(MAX_PROB)
       real tempx, step, testInten(MAX_INTEN), probAct(MAX_FLT),
      1     Haz(7,MAX_ATTEN, MAX_FLT, MAX_WIDTH, MAXPARAM, MAX_FTYPE),
      2     al_segwt(MAX_FLT), cumWt_segModel(MAX_FLT,MAX_SEG), ran1,
@@ -37,7 +37,7 @@ c     compatible with Haz45.3
       write (*,*) '**********************************'
       write (*,*) '*  Fractiles Code: Version 45.3  *'
       write (*,*) '*       Under Development        *'
-      write (*,*) '*          March, 2017           *'
+      write (*,*) '*           May, 2021            *'
       write (*,*) '**********************************'
 
 c     Open and read the run file
@@ -61,9 +61,9 @@ c     Loop over each period
 
 c     Read Input File
       call RdInput (nInten, testInten, nGM_model, cumWt_GM, nAttenType,
-     1              attenType, nProb, iPer, specT1(jPer), version)
+     1              attenType, nProb, iPer, specT1(jPer), version, PCflag)
 
-c     Read Fault Data (only the if this is the first period)
+c     Read Fault Data (only if this is the first period)
       if ( jPer .eq. 1 ) then
            call Rd_Fault_Data ( version, nFlt, nFlt0,
      7     cumWt_segModel, cumWt_param, cumWt_width, probAct,
@@ -96,8 +96,9 @@ c       Loop over Inten to save memory (read haz at only one intensity value at 
         do iInten=1,nInten
 
          write (*,'( 2x,''reading out1 file for iInten='',i5)') iInten
-         call read_Out1_PC ( nFlt, Haz, nWidth, nGM_Model, attenType,
-     1       nParamVar, natten, nFtype, iPer, nProb, iInten, nInten, PCflag )
+
+        call read_Out1 ( nFlt, Haz, nWidth, nGM_Model, attenType,
+     1       nParamVar, nAtten, nFtype, iPer, nProb, iInten, nInten, PCflag)
          write (*,'( 2x,''out of read_Out1'')')
 
 c        Monte Carlo Sampling of Hazard
@@ -109,7 +110,7 @@ c        Monte Carlo Sampling of Hazard
           endif
 
 c         Sample standard normal for the PC method
-          if (PCflag .eq. 1 ) then
+          if (PCflag(iPer) .eq. 1 ) then
             xi = gasdev(iseed)
             call calc_Hermite ( xi, hermite )
           endif
@@ -154,18 +155,18 @@ c             Select the parameter variation for this subsource and fault width
 
 c             Add the sampled hazard curve to the total hazard
 c             Standard Method
-              if (PCflag .eq. 0) then
+              if (PCflag(iPer) .eq. 0) then
                 Haz1(iSample,iInten) = Haz1(iSample,iInten)
-     1                    + Haz(iPC,mcAtten(jAttenType),iFlt1,mcWidth,mcParam,mcFtype)
+     1                    + Haz(1,mcAtten(jAttenType),iFlt1,mcWidth,mcParam,mcFtype)
      1                    * al_segwt(iflt1)
                 mean(iInten)=mean(iInten)
-     1	 	          + Haz(iPC,mcAtten(jAttenType),iFlt1,mcWidth,mcParam,mcFtype)
+     1	 	          + Haz(1,mcAtten(jAttenType),iFlt1,mcWidth,mcParam,mcFtype)
      1                    * al_segwt(iflt1)
+
 c             PC method
-              else if (PCflag .eq. 1) then
-                nPC = 7
+              else if (PCflag(iPer) .eq. 1) then
                 sum = 0.
-                do iPC=1,nPC
+                do iPC=1,7
                   sum = sum + hermite(iPC)* Haz(iPC,mcAtten(jAttenType),iFlt1,mcWidth,mcParam,mcFtype)
                 enddo
                 Haz1(iSample,iInten) = Haz1(iSample,iInten)
@@ -278,115 +279,7 @@ c     Write UHS
 
 c -------------------------------------------------------------------
 
-      subroutine read_Out1_ST ( nFlt, haz, nWidth, nGM_Model, attenType,
-     1           nParamVar, nAtten, nFtype, iPer, nProb, jInten, nInten)
-
-      implicit none
-      include 'fract.h'
-
-      integer nInten, nFlt, nAtten(1), iProb, nAtten1, nWidth1, jFlt,
-     1        nParamVar(MAX_FLT,MAX_WIDTH), nWidth(MAX_FLT), nfiles,
-     2        nFtype(MAX_FLT), iPer, nProb, nwr, i, j, iFlt, jProb,
-     3        i1, iAtten, iWidth, iFtype, jInten, jFltWidth, nInten1,
-     4        nFtype1, nParamVar1(100), nGM_Model(MAX_ATTENTYPE)
-      integer attenType(MAX_FLT)
-      real haz(MAX_ATTEN,MAX_FLT,MAX_WIDTH,MAXPARAM,MAX_FTYPE),
-     1     temp(MAX_INTEN), version
-      character*80 file1, dummy
-
-      nwr = 12
-      nfiles = 1
-
-C     Loop over the number of files.
-      do 100 i1=1,nfiles
-
-c     Open output file
-      if (jInten .eq. 1 ) then
-        read (31,'( a80)') file1
-        write (*,*) 'Opening out1 file from the hazard runs.'
-        write (*,*) file1
-        open (nwr,file=file1,status='old')
-      else
-        rewind (nwr)
-      endif
-
-C     Check for version compatibility with hazard code
-        read (nwr,*) version
-         if (version .ne. 45.3) then
-         write (*,*) 'Incompatible version of Haz45, use Haz45.3'
-         stop 99
-        endif
-
-christie
-        read (nwr,*) dummy
-christie
-
-c     Read out1 file
-      do iFlt=1,nFlt
-       do iWidth=1,nWidth(iFlt)
-        do jProb=1,nProb
-
-          read (nwr,*,err=200) jFlt, jFltWidth, iProb, nAtten1, nWidth1, nFtype1,
-     1         nParamVar1(iWidth),nInten1
-
-C        Check for Array Dimension of haz Array.
-         if (nFlt .gt. MAX_FLT) then
-           write (*,*) 'MAX_FLT needs to be increased to ', nFlt
-           write (*,*) 'Change Array Parameter in FRACT.H and recompile.'
-           stop 99
-         endif
-         if (nWidth(iFlt) .gt. MAX_WIDTH) then
-           write (*,*) 'MAX_WIDTH needs to be increased to ', nWidth(iFlt)
-           write (*,*) 'Change Array Parameter in FRACT.H and recompile.'
-           stop 99
-         endif
-         if (iProb .gt. MAX_PROB) then
-           write (*,*) 'MAX_PROB needs to be increased to ', iProb
-           write (*,*) 'Change Array Parameter in FRACT.H and recompile.'
-           stop 99
-         endif
-         if (nFtype(iFlt) .gt. MAX_FTYPE) then
-           write (*,*) 'MAX_FTYPE needs to be increased to ', nFtype(iFlt)
-           write (*,*) 'Change Array Parameter in FRACT.H and recompile.'
-           stop 99
-         endif
-
-         do iAtten=1,nGM_model(attenType(iFlt))
-          do iFtype=1,nFtype(iFlt)
-           do i=1,nParamVar(iFlt,iWidth)
- 	    read (nwr,*,err=201) (temp(j),j=1,nInten)
-
-c           Only keep if it is the desired spectral period
-	    if ( iProb .eq. iPer) then
-	      haz(iAtten,iFlt,iWidth,i,iFtype) = temp(jInten)
-            endif
-           enddo
-          enddo
-	 enddo
-        enddo
-       enddo
-      enddo
-
-  100 continue
-
-      if (jInten .eq. nInten ) close (nwr)
-
-      return
- 200  write (*,'( 2x,''Error reading iflt line in out1'',3i5)') iflt, iWidth, iProb
-      backspace (nwr)
-      read (nwr,'( a80)') dummy
-      write (*,'( a80)') dummy
-      stop 99
- 201  write (*,'( 2x,''Error reading haz line in out1'',5i5 )') iflt, iWidth, iProb, iAtten, iFtype, i
-      backspace (nwr)
-      read (nwr,'( a80)') dummy
-      write (*,'( a80)') dummy
-      stop 99
-      end
-
-c--------------------------------------------------------------------------
-
-      subroutine read_Out1_PC ( nFlt, haz, nWidth, nGM_Model, attenType,
+      subroutine read_Out1 ( nFlt, haz, nWidth, nGM_Model, attenType,
      1           nParamVar, nAtten, nFtype, iPer, nProb, jInten, nInten, PCflag)
 
       implicit none
@@ -397,16 +290,12 @@ c--------------------------------------------------------------------------
      2        nFtype(MAX_FLT), iPer, nProb, nwr, i, j, iFlt, jProb,
      3        i1, iAtten, iWidth, iFtype, jInten, jFltWidth, nInten1,
      4        nFtype1, nParamVar1(100), nGM_Model(MAX_ATTENTYPE)
-      integer attenType(MAX_FLT), PCflag, iPC, nPC
+      integer attenType(MAX_FLT), PCflag(MAX_PROB)
       real haz(7,MAX_ATTEN,MAX_FLT,MAX_WIDTH,MAXPARAM,MAX_FTYPE),
      1     temp(MAX_INTEN), version
       character*80 file1, dummy
 
       nwr = 12
-      nfiles = 1
-
-C     Loop over the number of files.
-      do 100 i1=1,nfiles
 
 c     Open output file
       if (jInten .eq. 1 ) then
@@ -425,13 +314,6 @@ C     Check for version compatibility with hazard code
         stop 99
       endif
 
-      read (nwr,*) PCflag
-      if (PCflag .eq. 1) then
-        nPC = 7
-      elseif (PCflag .eq. 0) then
-        nPC = 1
-      endif
-
 c     Read out1 file
       do iFlt=1,nFlt
        do iWidth=1,nWidth(iFlt)
@@ -465,37 +347,44 @@ C        Check for Array Dimension of haz Array.
          do iAtten=1,nGM_model(attenType(iFlt))
           do iFtype=1,nFtype(iFlt)
            do i=1,nParamVar(iFlt,iWidth)
-            do iPC=1,nPC
-             read (nwr,*,err=201) (temp(j),j=1,nInten)
-
-c            Only keep if it is the desired spectral period
-             if ( iProb .eq. iPer) then
-              haz(iPC,iAtten,iFlt,iWidth,i,iFtype) = temp(jInten)
+             if (PCflag(iProb) .eq. 0) then
+               read (nwr,*,err=201) (temp(j),j=1,nInten)
+c              Only keep if it is the desired spectral period
+               if ( iProb .eq. iPer) then
+                 haz(1,iAtten,iFlt,iWidth,i,iFtype) = temp(jInten)
+               endif
+             elseif (PCflag(iProb) .eq. 1) then
+               do iPC=1,7
+                 read (nwr,*,err=201) (temp(j),j=1,nInten)
+ c               only keep if it is the desired spectral period
+                 if ( iProb .eq. iPer) then
+                   haz(iPC,iAtten,iFlt,iWidth,i,iFtype) = temp(jInten)
+                 endif
+               enddo
              endif
-            enddo
+
            enddo
           enddo
-         enddo
+	       enddo
         enddo
        enddo
       enddo
 
-  100 continue
-
       if (jInten .eq. nInten ) close (nwr)
 
       return
-  200  write (*,'( 2x,''Error reading iflt line in out1'',3i5)') iflt, iWidth, iProb
+ 200  write (*,'( 2x,''Error reading iflt line in out1'',3i5)') iflt, iWidth, iProb
       backspace (nwr)
       read (nwr,'( a80)') dummy
       write (*,'( a80)') dummy
       stop 99
-  201  write (*,'( 2x,''Error reading haz line in out1'',5i5 )') iflt, iWidth, iProb, iAtten, iFtype, i
+ 201  write (*,'( 2x,''Error reading haz line in out1'',5i5 )') iflt, iWidth, iProb, iAtten, iFtype, i
       backspace (nwr)
       read (nwr,'( a80)') dummy
       write (*,'( a80)') dummy
       stop 99
       end
+
 c -------------------------------------------------------------------------
 
       subroutine calc_Hermite ( xi, hermite)
