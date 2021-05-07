@@ -6,7 +6,7 @@ c ----------------------------
 
       integer iseed, i1, isave, n1, n, i, iflag
       real ran1, wt(n1, n1), x
-      
+
 c     Get random number
       x = ran1( iseed )
 
@@ -16,7 +16,7 @@ c     Get random number
           return
         endif
       enddo
-      
+
       write (*,*) ' Get Random Number 1'
       write (*,'( 2x,''Error - bad ran number or weights'')')
       write (*,*) ' Random Number        = ', x
@@ -28,7 +28,7 @@ c     Get random number
       write (*,'( 2x,''iflag ='',i5)') iflag
       stop 99
       end
-      
+
 c ----------------------------
       subroutine GetRandom1b ( iseed, n, wt, i1, iSave, n1, n2 )
 
@@ -46,14 +46,14 @@ c     Get random number
           return
         endif
       enddo
-      
+
       write (*,*) ' Get Random Number 1b'
       write (*,'( 2x,''Error - bad ran number or weights'')')
       write (*,*) x
       write (*,*) (wt(i1,i),i=1,n)
       stop 99
       end
-      
+
 c ----------------------------
       subroutine GetRandom2 ( iseed, n, wt, i1, i2, iSave, n1, n2 )
 
@@ -71,7 +71,7 @@ c     Get random number
           return
         endif
       enddo
-      
+
       write (*,*) ' Get Random Number 2'
       write (*,'( 2x,''Error - bad ran number 2 or weights'')')
 
@@ -96,7 +96,7 @@ c     Random number generator, From numerical recipes
       integer j, k, iv(ntab), iy
       save iv, iy
       data iv /ntab*0/, iy /0/
-      
+
       if (idum .le. 0 .or. iy .eq. 0 ) then
         idum=max(-idum,1)
         do j=ntab+8,1,-1
@@ -120,12 +120,12 @@ c     Random number generator, From numerical recipes
 c ----------------------------------------------------------------------
 
       subroutine CheckDim ( n, nMax, name )
-      
+
       implicit none
-     
+
       integer n, nMax
       character*80 name
-      
+
       if ( n .gt. nMax ) then
         write (*,'( 2x,''Array Dimension Too Small'')')
         write (*,'( 2x,''Increase '',a20,'' to '',i5)') name, n
@@ -137,13 +137,13 @@ c ----------------------------------------------------------------------
 c --------------------------
 
       subroutine CheckWt ( x, n, fName, name )
-      
+
       implicit none
-      
+
       integer i, n
       real x(1), sum
       character*80 name, fName
-      
+
       sum = 0.
       do i=1,n
         sum = sum + x(i)
@@ -177,10 +177,10 @@ C     |         X     --SORTED ARRAY                           |
 C     |________________________________________________________|
 C
       SUBROUTINE SORT(X,Y,N)
-      
+
       implicit none
 
-      INTEGER I,J,K,L,M,N      
+      INTEGER I,J,K,L,M,N
       REAL X(1),Y(1),S,T
 
       I = 1
@@ -245,5 +245,27 @@ C
 
 c -------------
 
- 
-
+      FUNCTION gasdev(idum)
+      INTEGER idum
+      REAL gasdev
+CU    USES ran1
+      INTEGER iset
+      REAL fac,gset,rsq,v1,v2,ran1
+      SAVE iset,gset
+      DATA iset/0/
+      if (idum.lt.0) iset=0
+      if (iset.eq.0) then
+1       v1=2.*ran1(idum)-1.
+        v2=2.*ran1(idum)-1.
+        rsq=v1**2+v2**2
+        if(rsq.ge.1..or.rsq.eq.0.)goto 1
+        fac=sqrt(-2.*log(rsq)/rsq)
+        gset=v1*fac
+        gasdev=v2*fac
+        iset=1
+      else
+        gasdev=gset
+        iset=0
+      endif
+      return
+      END
