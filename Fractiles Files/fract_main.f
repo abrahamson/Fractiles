@@ -289,7 +289,7 @@ c -------------------------------------------------------------------
      1        nParamVar(MAX_FLT,MAX_WIDTH), nWidth(MAX_FLT), nfiles,
      2        nFtype(MAX_FLT), iPer, nProb, nwr, i, j, iFlt, jProb,
      3        i1, iAtten, iWidth, iFtype, jInten, jFltWidth, nInten1,
-     4        nFtype1, nParamVar1(100), nGM_Model(MAX_ATTENTYPE)
+     4        nFtype1, nParamVar1(100), nGM_Model(MAX_ATTENTYPE), iPC
       integer attenType(MAX_FLT), PCflag(MAX_PROB)
       real haz(7,MAX_ATTEN,MAX_FLT,MAX_WIDTH,MAXPARAM,MAX_FTYPE),
      1     temp(MAX_INTEN), version
@@ -356,7 +356,7 @@ c              Only keep if it is the desired spectral period
              elseif (PCflag(iProb) .eq. 1) then
                do iPC=1,7
                  read (nwr,*,err=201) (temp(j),j=1,nInten)
- c               only keep if it is the desired spectral period
+c                only keep if it is the desired spectral period
                  if ( iProb .eq. iPer) then
                    haz(iPC,iAtten,iFlt,iWidth,i,iFtype) = temp(jInten)
                  endif

@@ -6,7 +6,7 @@ c -------------------------------------------------------------------------
       implicit none
       include 'fract.h'
 
-      integer nInten, ntotal, attentype(MAX_FLT), nfiles, PCflag,
+      integer nInten, ntotal, attentype(MAX_FLT), nfiles, PCflag(MAX_PROB),
      1        jCalc(MAX_ATTENTYPE,MAX_ATTEN), nProb, nattentype,
      2        nGM_Model(MAX_ATTENTYPE), j, jj, iprob, iPer, nwr
       real testInten(MAX_INTEN), dummy, specT, dirflag,
