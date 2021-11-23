@@ -207,9 +207,9 @@ c       Compute fractile values
         do iInten=1,nInten
           do iperc = 1,nPerc
             i1 = int(iperc*step*nSample)
-  	    perc(iperc,iInten) = Haz1(i1,iInten)
+  	        perc(iperc,iInten) = Haz1(i1,iInten)
           enddo
-	enddo
+	      enddo
 
 c       Write output
         write (30,'( f10.3,2x,''Period (sec)'')') specT1(jPer)
@@ -235,7 +235,7 @@ c         Copy sorted hazard to 1-d array
           enddo
 
           testHaz = hazLevel(iHazLevel)
-	  do iAmp=2,nInten
+	        do iAmp=2,nInten
 
 c          Check for zero values in hazard curve.
            if (hazTotal(iAmp) .eq. 0. ) then
