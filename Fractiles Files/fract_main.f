@@ -270,7 +270,7 @@ c     Write UHS
         enddo
       enddo
 
-
+      close(30)
       write (*,*)
       write (*,*) '*** Fractile Code (45) Completed with Normal Termination ***'
 
