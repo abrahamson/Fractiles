@@ -35,9 +35,9 @@ c     compatible with Haz45.3
 *** need to fix: treating all ftype as epistemic
 
       write (*,*) '**********************************'
-      write (*,*) '*  Fractiles Code: Version 45.3  *'
-      write (*,*) '*       Under Development        *'
-      write (*,*) '*           May, 2021            *'
+      write (*,*) '*         Fractiles Code         *'
+      write (*,*) '*          Release 45.3          *'
+      write (*,*) '*           March, 2023          *'
       write (*,*) '**********************************'
 
 c     Open and read the run file
