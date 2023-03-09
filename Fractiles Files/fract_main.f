@@ -12,18 +12,18 @@ c     compatible with Haz45.3
 
       integer iPer, nFlt0, nattentype, nProb, iFlt0, iFlt1, jAttenType, jFlt,
      1        i, j, k, jj, i1, i2, j2, nn100, iSample, mcSegModel, mcFType,
-     2        mcWidth, mcParam, nperc, nInten, nAtten(MAX_FLT), nsite, nFlt,
+     2        mcWidth, mcParam, nperc, nInten, nsite, nFlt,
      3        isite, iInten, nWidth(MAX_FLT), nParamVar(MAX_FLT,MAX_WIDTH),
      4        attentype(MAX_FLT), nGM_model(MAX_ATTENTYPE), nHazLevel
       integer iseed, nSample, nFtype(MAX_FLT), mcatten(MAX_SAMPLE), iHazLevel,
      1        f_start(MAX_FLT), f_num(MAX_FLT), nSegModel(MAX_FLT), iAmp, iPC,
-     2        faultflag(MAX_FLT,MAX_SEG,MAX_FLT), iFract, nPer, jPer, iperc,
+     2        faultflag(MAX_FLT,MAX_SEGMOD,MAX_SEG), iFract, nPer, jPer, iperc,
      3        PCflag(MAX_PROB)
       real tempx, step, testInten(MAX_INTEN), probAct(MAX_FLT),
      1     Haz(7,MAX_ATTEN, MAX_FLT, MAX_WIDTH, MAXPARAM, MAX_FTYPE),
-     2     al_segwt(MAX_FLT), cumWt_segModel(MAX_FLT,MAX_SEG), ran1,
+     2     al_segwt(MAX_FLT), cumWt_segModel(MAX_FLT,MAX_SEGMOD), ran1,
      3     cumWt_param(MAX_FLT,MAX_WIDTH,MAXPARAM), x, perc(100,MAX_INTEN),
-     4     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_Ftype(MAX_FLT,MAX_FTYPE)
+     4     cumWt_Width(MAX_FLT,MAX_WIDTH), cumWt_Ftype(MAX_FLT,MAXPARAM)
       real Haz1(MAX_SAMPLE,MAX_INTEN), sortarray(MAX_SAMPLE), mean(MAX_INTEN),
      1     cumWt_GM(MAX_ATTEN,MAX_ATTEN), hazTotal(100), UHS(MAX_PROB,5,10),
      2     specT1(MAX_PROB), hazLevel(10), testHaz, version, xi, hermite(10),
@@ -98,7 +98,7 @@ c       Loop over Inten to save memory (read haz at only one intensity value at 
          write (*,'( 2x,''reading out1 file for iInten='',i5)') iInten
 
         call read_Out1 ( nFlt, Haz, nWidth, nGM_Model, attenType,
-     1       nParamVar, nAtten, nFtype, iPer, nProb, iInten, nInten, PCflag)
+     1       nParamVar, nFtype, iPer, nProb, iInten, nInten, PCflag)
          write (*,'( 2x,''out of read_Out1'')')
 
 c        Monte Carlo Sampling of Hazard
@@ -280,16 +280,16 @@ c     Write UHS
 c -------------------------------------------------------------------
 
       subroutine read_Out1 ( nFlt, haz, nWidth, nGM_Model, attenType,
-     1           nParamVar, nAtten, nFtype, iPer, nProb, jInten, nInten, PCflag)
+     1           nParamVar, nFtype, iPer, nProb, jInten, nInten, PCflag)
 
       implicit none
       include 'fract.h'
 
-      integer nInten, nFlt, nAtten(1), iProb, nAtten1, nWidth1, jFlt,
+      integer nInten, nFlt, iProb, nAtten1, nWidth1, jFlt,
      1        nParamVar(MAX_FLT,MAX_WIDTH), nWidth(MAX_FLT), nfiles,
      2        nFtype(MAX_FLT), iPer, nProb, nwr, i, j, iFlt, jProb,
      3        i1, iAtten, iWidth, iFtype, jInten, jFltWidth, nInten1,
-     4        nFtype1, nParamVar1(100), nGM_Model(MAX_ATTENTYPE), iPC
+     4        nFtype1, nParamVar1(MAX_WIDTH), nGM_Model(MAX_ATTENTYPE), iPC
       integer attenType(MAX_FLT), PCflag(MAX_PROB)
       real haz(7,MAX_ATTEN,MAX_FLT,MAX_WIDTH,MAXPARAM,MAX_FTYPE),
      1     temp(MAX_INTEN), version
